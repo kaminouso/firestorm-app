@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FS App Premium - Master Edition V56</title>
+
+	<!-- iOS için Tam Ekran ve İkon -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="ikon.png">
+
+    <!-- Android için "Gömülü" Manifest (Tek Dosya Çözümü) -->
+    <link rel="manifest" href='data:application/manifest+json,{"display":"standalone","start_url":"index.html","short_name":"Uygulama","name":"Benim App","theme_color":"#d4af37","background_color":"#000000"}'>
+    
+    <!-- Android Bildirim Çubuğu Rengi -->
+    <meta name="theme-color" content="#d4af37">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.js"></script>
+
+    <style>
+        /* --- TEMEL AYARLAR --- */
+        :root {
+            --bg-color: #121212;
+            --logo-color: #D4AF37;
+            --event-color: #ffffff; 
+            --text-color: #eee;
+            --card-bg: #1e1e1e;
+            --ease-custom: cubic-bezier(0.25, 1, 0.5, 1);
+            --anim-duration: 0.6s;
+            --danger: #cc0000;
+            --success: #007E33;
+            --global-color: #40E0D0;
+        }
+
+        * { -webkit-tap-highlight-color: transparent; outline: none; box-sizing: border-box; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; overflow: hidden; height: 100vh; width: 100vw; user-select: none; touch-action: manipulation; }
+
+        /* --- LOGO VE GİRİŞ --- */
+        #logo { 
+            position: absolute; display: flex; justify-content: center; align-items: center; border-radius: 50%; 
+            cursor: pointer; overflow: hidden; z-index: 1001;
+            transform: translate(-50%, -50%);
+            transition: top var(--anim-duration) var(--ease-custom), left var(--anim-duration) var(--ease-custom), 
+                        width var(--anim-duration) var(--ease-custom), height var(--anim-duration) var(--ease-custom), 
+                        border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+        }
+        #logo-img { position: absolute; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s; pointer-events: none; opacity: 1; border-radius: 50%;}
+        
+        #login-ui { position: absolute; opacity: 0; display: none; flex-direction: column; align-items: center; transition: opacity 0.3s; z-index: 10;}
+        .login-inp { background: #111; border: 1px solid var(--logo-color); color: #fff; padding: 15px; border-radius: 8px; width: 220px; margin-bottom: 15px; text-align: center; font-size: 1.2rem; font-weight: bold; }
+        .login-btn { background: var(--logo-color); color: #000; border: none; padding: 15px 40px; font-weight: 900; border-radius: 8px; cursor: pointer; font-size: 1.1rem; width: 220px;}
+
+        body.state-intro #logo { top: 35%; left: 50%; width: 220px; height: 220px; background: #1a1a1a; border: 2px solid var(--logo-color); box-shadow: 0 0 50px rgba(212, 175, 55, 0.4); }
+        body.state-login #logo, body.state-loading #logo, body.state-error #logo, body.state-success #logo { top: 50%; left: 50%; width: 120vw; height: 120vw; background: var(--bg-color); border: 4px solid var(--logo-color); box-shadow: none; cursor:default; }
+        body.state-login #logo-img, body.state-loading #logo-img, body.state-error #logo-img, body.state-success #logo-img { opacity: 0; }
+        body.state-login #login-ui { display: flex; opacity: 1; transition-delay: 0.3s; pointer-events: auto; }
+        body.state-error #logo { border-color: var(--danger); box-shadow: inset 0 0 50px rgba(204, 0, 0, 0.2); }
+        body.state-success #logo { border-color: var(--success); box-shadow: inset 0 0 50px rgba(0, 126, 51, 0.2); }
+        
+        #status-icon { position: absolute; display: none; align-items: center; justify-content: center; width: 80px; height: 80px; z-index: 5; }
+        body.state-loading #status-icon, body.state-error #status-icon, body.state-success #status-icon { display: flex; opacity: 1; }
+        .loader-ring { position: absolute; width: 100%; height: 100%; border: 5px solid transparent; border-top-color: var(--logo-color); border-right-color: var(--logo-color); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        body.state-menu #logo { top: 15%; left: 50%; width: 100px; height: 100px; background: #1a1a1a; border: 2px solid var(--logo-color); box-shadow: 0 5px 20px rgba(212, 175, 55, 0.2); pointer-events:auto;}
+        body.state-content #logo { top: 40px; left: 40px; width: 45px; height: 45px; background: #1a1a1a; border: 1px solid var(--logo-color); box-shadow: none; pointer-events:auto;}
+
+        /* --- YENİ NESİL ROLLER & KUSURSUZ ÇERÇEVELER --- */
+        .b-fresh { border: 1px solid #777; }
+        .badge-fresh { background: #1a1a1a; color: #777; border: 1px solid #777; }
+        
+        .b-junior { border: 2px solid transparent; border-bottom: 2px solid #fff; border-left: 2px solid rgba(255,255,255,0.4); border-right: 2px solid rgba(255,255,255,0.4); border-radius: 50%; } 
+        .badge-junior { background: #1a1a1a; color: #fff; border: 2px solid #fff; }
+        
+        .b-senior { border: 2px solid #fff; border-radius: 50%; }
+        .badge-senior { background: #1a1a1a; color: #fff; border: 2px solid #fff; }
+        
+        .b-global { border: 2px solid var(--global-color); border-radius: 50%; box-shadow: 0 0 10px rgba(64,224,208,0.4); }
+        .badge-global { background: #1a1a1a; color: var(--global-color); border: 2px solid var(--global-color); }
+        
+        .b-chief { border: 2px solid var(--logo-color); border-radius: 50%; }
+        .badge-chief { background: #1a1a1a; color: var(--logo-color); border: 2px solid var(--logo-color); }
+        
+        .b-admin { border: 4px double var(--logo-color); border-radius: 50%; }
+        .badge-admin { background: #1a1a1a; color: var(--logo-color); border: 2px solid var(--logo-color); }
+
+        /* --- ÜST MENÜ & İKONLAR --- */
+        .top-icon { position: absolute; z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-sizing:border-box;}
+        
+        #profile-icon-wrapper { top: 20px; right: 20px; width: 45px; height: 45px; }
+        #profile-icon-wrapper img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; padding:2px; box-sizing:border-box; }
+        
+        /* FIX: position relative kaldırıldı, .top-icon class'ı zaten absolute. Bu sayede ikon yerinde kalır! */
+        #notes-icon-wrapper { top: 25px; right: 80px; width: 35px; height: 35px; border: 1px solid #555; }
+        
+        body.state-menu .top-icon, body.state-content .top-icon { opacity: 1; pointer-events: auto !important; }
+
+        /* YENİ BAŞLIK VE ADMIN DROPDOWN YAPISI */
+        #title-wrapper { position: absolute; top: 28px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+        body.state-content #title-wrapper { opacity: 1; pointer-events: auto; }
+        #page-title { margin: 0; font-size: 1.2rem; font-weight: 600; text-transform: uppercase; color: var(--logo-color); cursor: pointer; padding: 5px 15px; border-radius: 8px; transition: background 0.2s;}
+        #page-title:active { background: rgba(212,175,55,0.1); }
+        #admin-crew-trigger { display: none; color: var(--logo-color); cursor: pointer; font-size: 0.8rem; padding: 10px; margin-left: -10px; user-select: none;}
+        #admin-crew-dropdown { display: none; position: absolute; top: 40px; left: 50%; transform: translateX(-50%); background: #1a1a1a; border: 1px solid var(--logo-color); border-radius: 8px; z-index: 10000; padding: 10px; width: 160px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+
+        #main-menu { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 80%; display: flex; flex-direction: column; gap: 15px; opacity: 0; pointer-events: none; transition: all 0.5s ease; z-index: 50;}
+        body.state-menu #main-menu { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) translateY(30px); }
+        .menu-btn { background: var(--card-bg); color: white; border: none; padding: 20px; font-size: 1.2rem; border-radius: 12px; border-left: 5px solid var(--logo-color); text-align: left; padding-left: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; width: 100%; }
+        
+        #content-wrapper { position: absolute; top: 90px; left: 0; width: 100%; height: calc(100% - 90px); padding: 20px; padding-bottom: 50px; overflow-y: auto; opacity: 0; pointer-events: none; transition: all 0.5s ease; z-index: 50; transform: translateY(30px);}
+        body.state-content #content-wrapper { opacity: 1; pointer-events: auto; transform: translateY(0);}
+        .tab-content { display: none; width: 100%; height: auto; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+
+        /* --- TAKVİM --- */
+        .view-selectors { display: flex; gap: 10px; margin-bottom: 20px; }
+        .v-btn { flex: 1; background: #222; border: 1px solid #444; color: #888; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .v-btn.active { border-color: var(--logo-color); color: var(--logo-color); background: #2a2a2a; }
+        .schedule-row { background: var(--card-bg); margin-bottom: 10px; border-radius: 8px; position: relative; border: 2px solid transparent; cursor: pointer; overflow: hidden; transition: all 0.3s; }
+        .schedule-row.today { border: 2px solid var(--logo-color) !important; background: #222; }
+        .schedule-row.conflict { border: 2px solid var(--danger) !important; box-shadow: inset 0 0 15px rgba(204,0,0,0.3); } 
+        .border-empty { border-color: #333; opacity: 0.8;}
+        .row-main { display: flex; padding: 15px; align-items: center; }
+        .schedule-date-box { width: 55px; text-align: center; display: flex; flex-direction: column; color: var(--logo-color); flex-shrink: 0;}
+        .schedule-row.border-empty .schedule-date-box { color: #666; }
+        .s-day-num { font-size: 1.3rem; font-weight: bold; }
+        .s-day-name { font-size: 0.7rem; color: #888; text-transform: uppercase;}
+        .day-divider-box { display:flex; gap:2px; margin: 0 15px; align-self:stretch; justify-content:center;}
+        .day-divider { width: 4px; border-radius: 2px; }
+        .day-divider.otel { background: var(--logo-color); }
+        .day-divider.etk { background: var(--event-color); }
+        .day-divider.empty { background: #444; width: 1px;}
+        .s-info { flex: 1; display: flex; flex-direction: column; gap: 5px; justify-content: center; }
+        .gate-badge { align-self: flex-start; background: transparent; color: var(--logo-color); font-weight: bold; font-size: 0.9rem; }
+        .row-detail { display: none; padding: 0 15px 15px 15px; border-top: 1px dashed #333; margin-top: -5px; position: relative; }
+        .schedule-row.expanded .row-detail { display: block; animation: slideDown 0.3s ease; }
+        .cal-edit-btn { position: absolute; top: 10px; left: 10px; z-index: 10; background: var(--logo-color); color: #000; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .module-card { background: #222; border-left: 3px solid transparent; padding: 10px; margin-top: 10px; border-radius: 6px; position: relative;}
+        .module-otel { border-left-color: var(--logo-color); }
+        .module-event { border-left-color: var(--event-color); }
+        .m-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 4px;}
+        .m-time { font-size: 0.85rem; color: #aaa; }
+        .m-desc { font-size: 0.8rem; color: #888; margin-top: 5px; line-height: 1.3;}
+        .month-header { margin-top: 25px; margin-bottom: 10px; color: var(--logo-color); font-size: 1.1rem; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .grid-container { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .grid-h { text-align: center; font-size: 0.7rem; color: #666; font-weight: bold; padding-bottom: 5px; }
+        .grid-cell { background: var(--card-bg); height: 85px; max-height: 85px; overflow: hidden; border-radius: 4px; padding: 4px; border: 1px solid #333; position: relative; cursor: pointer; display: flex; flex-direction: column;}
+        .grid-cell.today { border: 2px solid var(--logo-color) !important; background: #222; }
+        .grid-cell.conflict { border: 2px solid var(--danger) !important; box-shadow: inset 0 0 10px rgba(204,0,0,0.5); }
+        .grid-num { font-size: 0.9rem; font-weight: bold; margin-bottom: 2px;}
+        .grid-cell.g-empty .grid-num { color: #666; }
+        .grid-line { height: 3px; border-radius: 2px; margin-bottom: 4px; width: 100%; flex-shrink: 0; }
+        .grid-line.otel { background: var(--logo-color); }
+        .grid-line.etk { background: var(--event-color); }
+        .grid-line.mix { background: linear-gradient(to right, var(--logo-color) 50%, var(--event-color) 50%); }
+        .grid-txt { font-size: 0.65rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 2px;}
+        .grid-txt.otel { color: var(--logo-color);} 
+        .grid-txt.etk { color: #eee;}
+        .grid-detail-row { grid-column: 1 / -1; background: #222; border: 2px solid #555; border-radius: 8px; padding: 15px; margin: 5px 0; display: none; position: relative; animation: slideDown 0.3s ease; cursor: default; }
+        .grid-detail-row::before { content: ''; position: absolute; top: -12px; left: calc((100% / 7) * (var(--col) - 0.5) - 10px); border-width: 0 10px 12px 10px; border-style: solid; border-color: transparent transparent #555 transparent; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- REJİ KARTLARI --- */
+        .reji-row { display: flex; flex-direction: column; background: #222; margin-bottom: 12px; border-radius: 8px; border-left: 3px solid var(--logo-color); cursor:pointer; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.2);}
+        .reji-edit-row-raw { display: flex; flex-direction: column; background: #222; margin-bottom: 15px; padding: 12px 10px 10px 10px; border-radius: 8px; position: relative; box-shadow:0 4px 6px rgba(0,0,0,0.2);}
+        .reji-inp { flex: 1; min-width: 0; background: #111; border: 1px solid #444; color: white; padding: 8px 10px; border-radius: 6px; font-size: 0.9rem; font-family:inherit;}
+        .reji-ctrl-btn { padding: 6px; background: transparent; color: var(--danger); border: none; border-radius: 4px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; cursor: pointer;}
+        
+        /* --- MÜHENDİSLİK HARİTASI --- */
+        .blueprint-container {
+            background-color: #0b0b0b;
+            background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 20px 20px; border: 2px solid var(--logo-color); border-radius: 8px;
+            padding: 20px 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 5px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8); animation: slideDown 0.3s ease; box-sizing: border-box;
+        }
+        .bp-slot { min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-radius:8px; transition:all 0.2s;}
+        .bp-slot.drag-over { background: rgba(212,175,55,0.1); border: 1px dashed var(--logo-color); }
+        .bp-slot.drag-over .bp-circle { transform: scale(1.15); border-color:var(--logo-color); }
+
+        .bp-circle {
+            width: 50px; height: 50px; border-radius: 50%; border: 1px dashed #666; background: rgba(255,255,255,0.03);
+            display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #555;
+            cursor: pointer; transition: all 0.2s; position: relative; z-index:2; box-sizing:border-box;
+        }
+        .bp-circle:hover { border-color: var(--logo-color); color: var(--logo-color); background: rgba(212,175,55,0.1); }
+        .bp-circle.filled { border: 2px solid var(--logo-color); border-style: solid; background: #111; overflow: hidden; color: transparent; touch-action: none;}
+        .bp-circle.filled img { width: 100%; height: 100%; object-fit: cover; pointer-events:none; border-radius:50%;}
+        .bp-circle.dragging { opacity: 0.4; transform: scale(0.9); }
+        .bp-name { font-size: 0.75rem; color: #aaa; margin-top: 5px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight:bold; letter-spacing:0.5px;}
+        
+        .bp-actions {
+            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 5px; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 20;
+            background: rgba(0,0,0,0.85); padding: 5px; border-radius: 6px; border: 1px solid var(--logo-color); box-shadow: 0 4px 10px rgba(0,0,0,0.5); width: max-content;
+        }
+        .bp-actions.active { opacity: 1; pointer-events: auto; }
+        .bp-act-btn { background: transparent; border: none; color: #fff; padding: 5px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight:bold;}
+
+        /* --- PROFİL SEKMESİ --- */
+        .prof-header { text-align:center; padding-top:10px; padding-bottom: 20px; border-bottom: 1px solid #333; margin-bottom: 20px; position:relative;}
+        .prof-avatar { width:140px; height:140px; border-radius:50%; display:flex; justify-content:center; align-items:center; background:var(--card-bg); overflow: hidden; font-size: 60px; position: relative; box-sizing:border-box; margin:0 auto;}
+        .prof-name { margin: 0; font-size: 1.8rem; color: #fff; margin-top:25px;}
+        .prof-section { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .prof-sec-title { color: var(--logo-color); font-size: 1.1rem; margin: 0 0 15px 0; font-weight: bold; border-bottom: 1px dashed #444; padding-bottom: 5px; display:flex; justify-content:space-between; align-items:center;}
+        .skill-tag { display: inline-block; padding: 6px 12px; border-radius: 4px; margin: 0 8px 8px 0; font-size: 0.85rem;}
+        .bio-text { color: #bbb; font-size: 0.95rem; line-height: 1.5; margin: 0;}
+        .note-area { width: 100%; background: #111; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; min-height: 100px; margin-bottom: 10px;}
+
+        /* EKİP LİSTESİ */
+        .team-member-card { background: #222; padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 15px; margin-bottom: 10px; cursor: pointer; border-left: 3px solid transparent;}
+        .tm-avatar { width: 50px; height: 50px; border-radius: 50%; overflow: hidden; background: #111; display:flex; justify-content:center; align-items:center; font-size:25px; position:relative; box-sizing:border-box;}
+
+        .back-ui-btn { display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer; width:fit-content;}
+        .back-ui-icon { width:30px; height:30px; border-radius:50%; background:#222; border:1px solid #444; display:flex; justify-content:center; align-items:center; color:var(--logo-color); font-size:1.1rem; font-weight:bold;}
+        .back-ui-text { color:#aaa; font-weight:bold; font-size:0.85rem; letter-spacing:0.5px;}
+
+        /* --- EĞİTİM SEKMESİ --- */
+        .edu-tool-card { background: #1e1e1e; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--logo-color); transition: background 0.3s; overflow:hidden;}
+        .edu-tool-header { padding: 15px 15px; font-size: 1.2rem; font-weight: 900; display: flex; justify-content: space-between; align-items:center; cursor: pointer; text-transform: uppercase; color: #fff;}
+        .edu-choreo-list { display: none; background:#151515; animation: slideDown 0.3s ease; }
+        .edu-choreo-list.active { display: block; }
+        .edu-choreo-row { padding: 12px 15px; border-bottom: 1px solid #2a2a2a; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;}
+        .edu-choreo-row:hover { background: #222; }
+        .edu-choreo-row:last-child { border-bottom: none; }
+        .edu-c-title { font-size: 0.9rem; font-weight: bold; color: #ccc;}
+        .edu-progress-bg { background: #333; height: 6px; border-radius: 4px; overflow: hidden; width:70px; margin-top:5px;}
+        .edu-progress-bar { background: var(--logo-color); height: 100%; transition: width 0.5s ease;}
+        
+        .move-card { background: #222; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid transparent; overflow: hidden;}
+        .move-c-header { padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #222;}
+        .move-title { font-weight: bold; font-size: 0.95rem; color: #fff;}
+        .move-c-body { display: none; padding: 0 15px 15px 15px; border-top: 1px dashed #333; background: #1e1e1e; animation: slideDown 0.3s ease;}
+        .move-c-body.active { display: block; }
+        .move-desc { font-size: 0.85rem; color: #aaa; margin-top: 10px; margin-bottom: 10px; line-height: 1.4;}
+        
+        .fs-checkbox { width: 24px; height: 24px; border: 2px solid #555; border-radius: 5px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; background: #111; flex-shrink: 0; position: relative;}
+        .fs-checkbox.state-0 { background: #555; border-color: #555; color: #fff; }
+        .fs-checkbox.state-0::after { content: "✓"; font-weight: 900; font-size: 16px; }
+        .fs-checkbox.state-1 { background: var(--logo-color); border-color: var(--logo-color); color: #000; }
+        .fs-checkbox.state-1::after { content: "✓"; font-weight: 900; font-size: 16px; }
+
+        /* GELİŞTİR (DEVELOP) UI */
+        .dev-tab-btns { display:flex; border:1px solid var(--logo-color); border-radius:8px; overflow:hidden; margin-bottom:20px; }
+        .dev-tab-btn { flex:1; text-align:center; padding:12px; background:#111; color:var(--logo-color); font-weight:bold; cursor:pointer; transition:all 0.3s;}
+        .dev-tab-btn.active { background:var(--logo-color); color:#000; }
+        .dev-tool-chip { display:inline-block; padding:8px 12px; border-radius:20px; background:#111; border:1px solid #555; color:#aaa; margin:0 5px 5px 0; cursor:pointer; font-size:0.85rem;}
+        .dev-tool-chip.active { border-color:var(--logo-color); color:var(--logo-color); font-weight:bold; }
+        .dev-choreo-move-row { display:flex; align-items:center; background:#111; border:1px solid #333; padding:10px; border-radius:6px; margin-bottom:5px; position:relative; overflow:hidden;}
+        
+        /* DAMALI (GRIP) İKON */
+        .drag-handle { width:20px; height:20px; cursor:grab; margin-right:10px; opacity:0.5; background-image: radial-gradient(#aaa 30%, transparent 30%); background-size: 6px 6px; background-position: 0 0, 3px 3px; }
+
+        /* MODALLAR & TOAST */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 6000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-box { background: var(--card-bg); width: 100%; max-width: 400px; padding: 25px; border: 2px solid var(--logo-color); border-radius: 15px; overflow-y: auto; max-height: 90vh; }
+        .f-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.85rem; color: var(--logo-color); margin-bottom: 5px; font-weight: bold; }
+        .f-input { width: 100%; background: #111; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; font-size: 1rem; color-scheme: dark;}
+        .f-row { display: flex; gap: 10px; }
+        .m-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .m-btn { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .m-btn.save { background: var(--logo-color); color: black; }
+        .m-btn.cancel { background: #333; color: white; }
+        
+        #sync-indicator { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; display: none; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #444; align-items: center; gap: 8px;}
+        .sync-spinner { width: 12px; height: 12px; border: 2px solid var(--logo-color); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        
+        #media-overlay { position: fixed; inset: 0; background: black; z-index: 7000; display: none; }
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        @keyframes fadeInOut { 0%{opacity:0; bottom:10px;} 20%{opacity:1; bottom:30px;} 80%{opacity:1; bottom:30px;} 100%{opacity:0; bottom:10px;} }
+    </style>
+</head>
+<body class="state-intro" onclick="closeAllDetails(event)">
+
+    <div id="sync-indicator"><div class="sync-spinner" id="sync-spin"></div><span id="sync-text">Kaydediliyor...</span></div>
+
+    <!-- LOGO UI -->
+    <div id="logo" onclick="handleLogoClick(event)">
+        <img id="logo-img" src="https://lh3.googleusercontent.com/d/1dJUKCg5nhiNmTDp1tVJhIlJvq0f3Nq4V" alt="" onerror="this.style.display='none'">
+        <div id="login-ui" onclick="event.stopPropagation()">
+            <input type="password" id="key" class="login-inp" placeholder="Erişim Anahtarı">
+            <button type="button" class="login-btn" onclick="executeLogin()">GİRİŞ YAP</button>
+        </div>
+        <div id="status-icon"><div class="loader-ring"></div></div>
+    </div>
+
+    <!-- ÜST MENÜ & İKONLAR -->
+    <div id="notes-icon-wrapper" class="top-icon" onclick="openNotesModal(); event.stopPropagation();">
+        <span style="font-size:1.1rem;">📝</span>
+        <!-- KIRMIZI NOKTA ARTIK MUTLAK POZİSYON İÇİNDE YERİNİ KORUYOR -->
+        <div id="note-dot" style="position:absolute; top:-4px; right:-4px; width:14px; height:14px; background:var(--danger); border-radius:50%; display:none; border:2px solid #1a1a1a;"></div>
+    </div>
+    
+    <div id="profile-icon-wrapper" class="top-icon" onclick="adminViewingUserKey=null; openTab('Profil', 'PROFİL'); event.stopPropagation();">
+        <img id="profile-icon-img" src="" style="display:none;">
+        <span id="profile-icon-fallback">👤</span>
+    </div>
+    
+    <!-- YENİ BAŞLIK VE ADMIN DROPDOWN SİSTEMİ -->
+    <div id="title-wrapper">
+        <h2 id="page-title" onclick="handleTitleClick(event)">BAŞLIK</h2>
+        <div id="admin-crew-trigger" onclick="toggleAdminCrewMenu(event)">▼</div>
+        <div id="admin-crew-dropdown" onclick="event.stopPropagation()"></div>
+    </div>
+
+    <div id="main-menu" onclick="event.stopPropagation()">
+        <button type="button" class="menu-btn" onclick="adminViewingUserKey=null; openTab('Takvim', 'TAKVİM')">📅 Takvim</button>
+        <button type="button" class="menu-btn" onclick="adminViewingUserKey=null; openTab('Reji', 'REJİ')">📝 Reji</button>
+        <button type="button" class="menu-btn" onclick="adminViewingUserKey=null; openTab('Egitim', 'EĞİTİM')">🎓 Eğitim</button>
+        <button type="button" class="menu-btn" onclick="openTeamView()">👥 Crew</button>
+    </div>
+
+    <div id="content-wrapper" onclick="event.stopPropagation()">
+        <!-- TAKVİM -->
+        <div id="Takvim" class="tab-content">
+            <div class="view-selectors">
+                <button type="button" class="v-btn active" id="btn-week" onclick="setCalendarView('week')">Haftalık Görünüm</button>
+                <button type="button" class="v-btn" id="btn-month" onclick="setCalendarView('month')">Aylık Görünüm</button>
+            </div>
+            <div id="calendar-render-area"></div>
+        </div>
+
+        <!-- REJİ -->
+        <div id="Reji" class="tab-content">
+            <div id="reji-actions" style="display:none; justify-content:flex-end; margin-bottom:15px;">
+                <button type="button" id="reji-edit-btn" onclick="toggleRejiEdit()" style="background:var(--logo-color); color:#000; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">Düzenle</button>
+            </div>
+            <div id="reji-list"></div>
+        </div>
+
+        <!-- EĞİTİM -->
+        <div id="Egitim" class="tab-content">
+            <div id="edu-main-list"></div>
+            <div id="edu-detail-view" style="display:none;"></div>
+            <div id="dev-button-container" style="display:none; margin-top:20px; padding-top:10px;">
+                <button type="button" onclick="openTab('Gelistir', 'GELİŞTİR')" style="width:100%; background:var(--logo-color); color:#000; border:none; padding:10px; border-radius:6px; font-weight:900; font-size:1rem; cursor:pointer; text-transform:uppercase;">✚ Geliştir</button>
+            </div>
+        </div>
+        
+        <!-- PROFİL -->
+        <div id="Profil" class="tab-content">
+            <div id="profile-render-area"></div>
+        </div>
+
+        <!-- TEAM -->
+        <div id="Team" class="tab-content">
+            <div id="team-render-area"></div>
+            <div id="team-member-profile" style="display:none;"></div>
+        </div>
+
+        <!-- GELİŞTİR (DEVELOP) -->
+        <div id="Gelistir" class="tab-content">
+            <div class="back-ui-btn" onclick="openTab('Egitim', 'EĞİTİM')"><div class="back-ui-icon">←</div><span class="back-ui-text">EĞİTİME DÖN</span></div>
+            
+            <div class="dev-tab-btns">
+                <div class="dev-tab-btn active" id="btn-dev-move" onclick="setDevTab('move')">Hareket Ekle</div>
+                <div class="dev-tab-btn" id="btn-dev-choreo" onclick="setDevTab('choreo')">Koreografi Ekle</div>
+            </div>
+
+            <!-- HAREKET EKLE FORMU -->
+            <div id="dev-move-form">
+                <div class="f-group">
+                    <label>Eklenecek Tool(lar)</label>
+                    <div style="display:flex; border:1px solid var(--logo-color); border-radius:8px; overflow:hidden; margin-bottom:10px;">
+                        <div id="dm-tog-list" style="flex:1; text-align:center; padding:10px; background:var(--logo-color); color:#000; font-weight:bold; cursor:pointer;" onclick="setDevMode('move', 'list')">Listeden Seç</div>
+                        <div id="dm-tog-new" style="flex:1; text-align:center; padding:10px; background:#111; color:var(--logo-color); font-weight:bold; cursor:pointer;" onclick="setDevMode('move', 'new')">Yeni Ekle</div>
+                    </div>
+                    
+                    <div id="dm-list-wrap" style="background:#111; padding:15px; border-radius:8px; border:1px solid #333;"></div>
+                    
+                    <div id="dm-new-wrap" style="display:none; background:#111; padding:15px; border-radius:8px; border:1px solid var(--logo-color);">
+                        <div class="f-group"><label>Yeni Tool İsmi</label><input type="text" id="dm-new-name" class="f-input" style="text-align:left;"></div>
+                        <div class="f-group"><label>Zorluk (Rate: 1-5)</label><select id="dm-new-rate" class="f-input"><option value="1">1 (Fresh)</option><option value="2">2 (Junior)</option><option value="3">3 (Senior)</option><option value="4">4 (Global)</option><option value="5">5 (Chief)</option></select></div>
+                    </div>
+                </div>
+                
+                <div class="f-group"><label>Hareket İsmi</label><input type="text" id="dev-m-name" class="f-input" style="text-align:left;"></div>
+                <div class="f-group"><label>Açıklama (Opsiyonel)</label><textarea id="dev-m-desc" class="f-input" style="height:60px; text-align:left;"></textarea></div>
+                <div class="f-group"><label>Video URL (Drive/Youtube)</label><input type="text" id="dev-m-url" class="f-input" style="text-align:left;"></div>
+                <button type="button" class="m-btn save" style="width:100%; padding:15px; margin-top:10px;" onclick="saveDevMove()">Hareketi Veritabanına Ekle</button>
+            </div>
+
+            <!-- KOREOGRAFİ EKLE FORMU -->
+            <div id="dev-choreo-form" style="display:none;">
+                <div class="f-group">
+                    <label>Tool Seçimi</label>
+                    <select id="dev-c-tool" class="f-input" onchange="checkDevNewTool()">
+                        <!-- JS doldurur -->
+                    </select>
+                </div>
+                <div id="dev-c-new-tool-wrap" style="display:none; background:#111; padding:15px; border-radius:8px; border:1px solid var(--logo-color); margin-bottom:15px;">
+                    <div class="f-group"><label>Yeni Tool İsmi</label><input type="text" id="dev-c-new-tool-name" class="f-input"></div>
+                    <div class="f-group"><label>Zorluk (Rate: 1-5)</label><select id="dev-c-new-tool-rate" class="f-input"><option value="1">1 (Fresh)</option><option value="2">2 (Junior)</option><option value="3">3 (Senior)</option><option value="4">4 (Global)</option><option value="5">5 (Chief)</option></select></div>
+                </div>
+
+                <div class="f-group"><label>Koreografi İsmi (Song)</label><input type="text" id="dev-c-song" class="f-input" style="text-align:left;"></div>
+                
+                <div class="f-group">
+                    <label>Hareket Dizilimi</label>
+                    <div id="dev-c-move-list" style="background:#111; padding:10px; border-radius:8px; min-height:80px; border:1px solid #333; margin-bottom:10px;">
+                        <div style="color:#666; font-style:italic; text-align:center; padding:10px;">Henüz hareket eklenmedi.</div>
+                    </div>
+                    <button type="button" style="background:#222; color:var(--logo-color); border:1px dashed var(--logo-color); width:100%; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="openDevMoveSelectModal()">+ Listeden Hareket Ekle</button>
+                </div>
+                <button type="button" class="m-btn save" style="width:100%; padding:15px; margin-top:20px;" onclick="saveDevChoreo()">Koreografiyi Oluştur</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DEV HAREKET SEÇİM MODALI -->
+    <div id="dev-move-select-modal" class="modal" onclick="event.stopPropagation()">
+        <div class="modal-box">
+            <h3 style="color:var(--logo-color); text-align:center; margin:0 0 15px 0;">Kütüphaneden Hareket Seç</h3>
+            <select id="dev-ms-tool-filter" class="f-input" style="margin-bottom:15px;" onchange="renderDevMoveSelectModal()">
+                <!-- JS doldurur -->
+            </select>
+            <div id="dev-ms-list" style="display:flex; flex-direction:column; gap:5px; max-height: 300px; overflow-y:auto; margin-bottom:15px; background:#111; padding:10px; border-radius:8px;"></div>
+            <div class="m-btns"><button type="button" class="m-btn cancel" onclick="document.getElementById('dev-move-select-modal').style.display='none'">Kapat</button></div>
+        </div>
+    </div>
+
+    <!-- REJİ: DANSÇI SEÇİM MODALI -->
+    <div id="dancer-select-modal" class="modal" onclick="event.stopPropagation()">
+        <div class="modal-box">
+            <h3 style="color:var(--logo-color); text-align:center; margin:0 0 15px 0;">Dansçı Seç</h3>
+            <div id="ds-list" style="display:flex; flex-direction:column; gap:10px; max-height: 300px; overflow-y:auto; margin-bottom:15px;"></div>
+            <div class="m-btns">
+                <button type="button" class="m-btn cancel" onclick="closeDancerSelect()">İptal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALLAR -->
+    <div id="notes-modal" class="modal" onclick="event.stopPropagation()">
+        <div class="modal-box" style="padding:20px;" id="notes-modal-content"></div>
+    </div>
+
+    <div id="day-edit-modal" class="modal" onclick="event.stopPropagation()">
+        <div class="modal-box" style="padding:15px; max-width: 450px;" onclick="resetDeleteMode()">
+            <h3 id="de-date-title" style="margin:0 0 15px 0; color:var(--logo-color); text-align:center;">Günü Düzenle</h3>
+            <input type="hidden" id="de-row-index"><input type="hidden" id="de-date-str"><input type="hidden" id="de-day-str">
+            <div style="background:#222; padding:10px; border-radius:8px; margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+                <label style="margin:0; flex:1;">Çıkış:</label>
+                <input type="time" id="de-gate-time" class="f-input" style="width:100px; padding:8px;">
+                <button type="button" class="m-btn save" style="padding:8px 15px; flex:none; border-radius:4px;" onclick="saveDayGate(event)">Kaydet</button>
+            </div>
+            <div id="de-module-list" style="margin-bottom:15px;"></div>
+            <button type="button" id="btn-add-new-module" style="width:100%; background:#111; color:var(--logo-color); border:1px dashed var(--logo-color); padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="openAddFromDayEdit()">+ Yeni Ekle</button>
+            <div class="m-btns"><button type="button" class="m-btn cancel" onclick="document.getElementById('day-edit-modal').style.display='none'">Kapat</button></div>
+        </div>
+    </div>
+
+    <div id="event-modal" class="modal" onclick="event.stopPropagation()">
+        <div class="modal-box">
+            <h3 id="modal-title" style="color:var(--logo-color); margin:0 0 15px 0;">Etkinlik Ekle</h3>
+            <input type="hidden" id="f-row-index"><input type="hidden" id="f-module-index">
+            <div class="f-group"><label>Tür</label><select id="f-type" class="f-input" onchange="toggleFormFields()"><option value="sahne">Sahne</option><option value="etkinlik">Etkinlik</option></select></div>
+            <div class="f-group" id="wrap-freq"><label>Periyot</label><select id="f-freq" class="f-input" onchange="toggleFormFields()"><option value="single">Günübirlik</option><option value="weekly">Haftalık</option><option value="biweekly">İki Haftada Bir</option></select></div>
+            <div class="f-group"><label id="lbl-name">İsim</label><input type="text" id="f-name" class="f-input" style="text-align:left;"></div>
+            <div id="field-otel-gate" class="f-group" style="display:none;"><label>Çıkış</label><input type="time" id="f-gate" class="f-input"></div>
+            <div id="field-date-single" class="f-group" style="display:none;"><label>Tarih</label><input type="text" id="f-date" class="f-input" disabled></div>
+            <div id="field-date-weekly" class="f-group" style="display:none;"><label>Haftalık Gün</label><input type="text" id="f-day" class="f-input" disabled></div>
+            <div id="fields-weekly-range" style="display:none;">
+                <div class="f-group"><label>Başlangıç Tarihi</label><input type="date" id="f-start-date" class="f-input"></div>
+                <div class="f-group"><label>Bitiş Tarihi</label><input type="date" id="f-end-date" class="f-input"></div>
+            </div>
+            <div class="f-group"><label id="lbl-show-time">Showtime</label><input type="time" id="f-show-time" class="f-input" step="300"></div>
+            <div class="f-group"><label>Açıklama</label><textarea id="f-desc" class="f-input" style="height:70px; text-align:left;"></textarea></div>
+            <div class="m-btns"><button type="button" class="m-btn cancel" onclick="document.getElementById('event-modal').style.display='none'">İptal</button><button type="button" class="m-btn save" onclick="saveEvent()">Kaydet</button></div>
+        </div>
+    </div>
+
+    <!-- ÇIKIŞ MODALI -->
+    <div id="logout-modal" class="modal" onclick="event.stopPropagation()">
+        <div class="modal-box" style="text-align:center; padding:30px;">
+            <h3 style="color:var(--danger); margin:0 0 15px 0;">Çıkış Yap</h3>
+            <p style="color:#ccc; margin-bottom:25px;">Hesabınızdan çıkış yapmak istediğinize emin misiniz?</p>
+            <div class="m-btns">
+                <button type="button" class="m-btn cancel" onclick="document.getElementById('logout-modal').style.display='none'">İptal</button>
+                <button type="button" class="m-btn save" style="background:var(--danger); color:white;" onclick="confirmLogout()">Çıkış Yap</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="profile-upload" accept="image/*" style="display:none" onchange="handlePhotoSelect(event)">
+    <div id="crop-modal" class="modal" onclick="event.stopPropagation()">
+        <div class="modal-box" style="padding:15px; max-width: 400px; text-align:center;">
+            <h3 style="color:var(--logo-color); margin:0 0 15px 0;">Fotoğrafı Ayarla</h3>
+            <div id="croppie-container" style="width:100%; height:300px; margin-bottom:15px;"></div>
+            <div class="m-btns"><button type="button" class="m-btn cancel" onclick="closeCropModal()">İptal</button><button type="button" class="m-btn save" onclick="saveCroppedImage()">Kaydet</button></div>
+        </div>
+    </div>
+
+    <div id="prof-edit-modal" class="modal" onclick="event.stopPropagation()">
+        <div class="modal-box">
+            <h3 style="color:var(--logo-color); margin:0 0 15px 0; text-align:center;">Kendini Tanıt</h3>
+            <div class="f-group"><label>Hakkımda (Bio)</label><textarea id="p-bio-inp" class="f-input" style="height:120px; text-align:left;" placeholder="Yeteneklerinden, hobilerinden bahset..."></textarea></div>
+            <div class="m-btns"><button type="button" class="m-btn cancel" onclick="document.getElementById('prof-edit-modal').style.display='none'">İptal</button><button type="button" class="m-btn save" onclick="saveBioEdit()">Kaydet</button></div>
+        </div>
+    </div>
+
+    <div id="media-overlay">
+        <div style="position:absolute; top:20px; right:20px; color:white; font-size:30px; z-index:7001; background:rgba(0,0,0,0.5); width:45px; height:45px; text-align:center; border-radius:50%; line-height:45px; cursor:pointer;" onclick="document.getElementById('media-overlay').style.display='none'; document.getElementById('vid-frame').src='';">✕</div>
+        <iframe id="vid-frame" allowfullscreen></iframe>
+    </div>
+
+    <script>
+        const API = "https://script.google.com/macros/s/AKfycbyiRUpCuccZSSaiplzcG1hHgW-KHWO-LGFslcLbUekV84Rp4s0r-whqeXqRJXgpiT7B/exec"; 
+        
+        let user = null, agendaData = [], rejiData = [];
+        let libraryData = [], educationData = [], toolData = [];
+        let teamData = [], allUsersData = []; 
+        let teamDataLoaded = false; 
+        let croppieInstance = null; 
+        
+        let openTool = null; 
+        let openMove = null;
+        let adminViewingUserKey = null; 
+        let noteToDeleteKey = null;
+        let adminSelectedCrew = ""; 
+
+        const trDaysFull = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+        const trDaysShort = ['PAZ','PZT','SAL','ÇAR','PER','CUM','CMT'];
+        const aylar = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN","TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"];
+
+        function getRoleClass(role) {
+            let r = (role || "").toLowerCase();
+            if(r==='admin') return 'admin'; if(r==='chief' || r==='sef') return 'chief';
+            if(r==='global') return 'global'; if(r==='senior') return 'senior';
+            if(r==='junior') return 'junior'; return 'fresh';
+        }
+
+        function getRoleLevel(role) {
+            let r = (role || "").toLowerCase();
+            if(r === 'admin' || r === 'chief' || r === 'sef') return 5;
+            if(r === 'global') return 4;
+            if(r === 'senior') return 3;
+            if(r === 'junior') return 2;
+            return 1; 
+        }
+
+        function escapeHTML(str) {
+            if(str === null || str === undefined) return "";
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+        }
+
+        function showToast(msg, isSuccess = false) {
+            let t = document.createElement('div'); t.innerText = msg;
+            let bg = isSuccess ? "var(--success)" : "var(--danger)";
+            t.style.cssText = `position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:${bg}; color:white; padding:10px 20px; border-radius:20px; z-index:9999; font-weight:bold; font-size:0.9rem; animation: fadeInOut 2s ease forwards; box-shadow:0 4px 10px rgba(0,0,0,0.5);`;
+            document.body.appendChild(t); setTimeout(() => t.remove(), 2000);
+        }
+
+        document.getElementById("key").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") { event.preventDefault(); executeLogin(); }
+        });
+
+        function handleLogoClick(e) {
+            e.stopPropagation(); adminViewingUserKey = null; 
+            const state = document.body.className;
+            if(state === "state-intro") { if(user && user.key) goState("menu"); else goState("login"); }
+            else if (state === "state-login") goState("intro");
+            else if (state !== "state-loading" && state !== "state-error" && state !== "state-success") { closeAllDetails(e); goState("intro"); }
+        }
+
+        function handleTitleClick(e) {
+            e.stopPropagation();
+            if (document.getElementById('Egitim').classList.contains('active')) {
+                if (currentOpenSong) { 
+                    document.getElementById('edu-detail-view').style.display = 'none';
+                    document.getElementById('edu-main-list').style.display = 'block';
+                    currentOpenSong = null; currentOpenTool = null; openMove = null;
+                } else if (adminViewingUserKey) { 
+                    openTab('Team', 'CREW'); renderTeamMemberProfile(adminViewingUserKey);
+                } else { goState('menu'); }
+            } else if (document.getElementById('Team').classList.contains('active')) {
+                if(adminViewingUserKey) { openTeamView(); } else { goState('menu'); }
+            } else { adminViewingUserKey = null; goState('menu'); }
+        }
+
+        function logout() { document.getElementById('logout-modal').style.display = 'flex'; }
+        function confirmLogout() { localStorage.removeItem('fs_v56'); location.reload(); }
+
+        function cleanTime(val) {
+            if (!val || val === "null" || val === "") return "null";
+            let str = String(val).replace(/^'/, ''); 
+            if (str.includes("GMT") || str.includes("1899") || str.includes("T")) {
+                let d = new Date(str);
+                if (!isNaN(d)) return String(d.getHours()).padStart(2, '0') + ":" + String(d.getMinutes()).padStart(2, '0');
+            }
+            if (str.length >= 5 && str.includes(":")) return str.split(":")[0].padStart(2, '0') + ":" + str.split(":")[1].padStart(2, '0');
+            return str;
+        }
+
+        function formatDateTR(dStr) {
+            if(!dStr) return ""; let p = String(dStr).split('-'); if(p.length !== 3) return dStr;
+            return `${parseInt(p[2])}.${parseInt(p[1])}.${p[0]}`; 
+        }
+
+        function parseModule(m) {
+            let n = m.name || ""; let isOtel = String(n).startsWith('$'); let cleanName = isOtel ? String(n).substring(1).trim() : n;
+            let hasTime = (m.showtime && m.showtime !== "null" && m.showtime !== "" && cleanTime(m.showtime) !== "null");
+            return { isOtel, cleanName, hasTime, showtime: m.showtime, desc: m.desc };
+        }
+
+        function sortModules(modules) {
+            modules.sort((a,b) => {
+                let cA = cleanTime(a.showtime); let cB = cleanTime(b.showtime);
+                let tA = (cA && cA !== "null" && cA !== "") ? cA : "00:00"; let tB = (cB && cB !== "null" && cB !== "") ? cB : "00:00";
+                return tA.localeCompare(tB);
+            });
+        }
+
+        function showSync() {
+            const ind = document.getElementById('sync-indicator');
+            document.getElementById('sync-spin').style.display = 'block'; document.getElementById('sync-text').innerText = 'Kaydediliyor...';
+            document.getElementById('sync-text').style.color = '#fff'; ind.style.display = 'flex';
+        }
+        function hideSync() {
+            const ind = document.getElementById('sync-indicator');
+            document.getElementById('sync-spin').style.display = 'none'; document.getElementById('sync-text').innerText = '✓ Senkronize Edildi';
+            document.getElementById('sync-text').style.color = 'var(--logo-color)'; setTimeout(() => { ind.style.display = 'none'; }, 2000);
+        }
+
+        function getUserSkills(targetKey) {
+            if(!targetKey) targetKey = user.key;
+            let u = (targetKey === user.key) ? user : teamData.find(x => x.key == targetKey);
+            if(!u) return {};
+            try { return JSON.parse(u.skills || "{}"); } catch(e) { return {}; }
+        }
+
+        function getUserTasks(targetKey) {
+            if(!targetKey) targetKey = user.key;
+            let u = (targetKey === user.key) ? user : teamData.find(x => x.key == targetKey);
+            if(!u) return {};
+            try { return JSON.parse(u.tasks || "{}"); } catch(e) { return {}; }
+        }
+
+        function getProgressPercent(moveListStr, targetKey) {
+            if (!moveListStr || moveListStr.trim() === "") return 0;
+            let tasks = getUserTasks(targetKey);
+            let moves = moveListStr.split(',').map(s => s.trim()).filter(s => s);
+            if (moves.length === 0) return 100;
+            let completed = 0;
+            moves.forEach(mId => { if (tasks[mId] === 1) completed++; });
+            return Math.round((completed / moves.length) * 100);
+        }
+
+        function triggerTrainingSync(targetKey = user.key) {
+            let u = targetKey === user.key ? user : teamData.find(x => x.key === targetKey);
+            const payload = { action: 'updateTrainingData', key: targetKey, skills: JSON.parse(u.skills||"{}"), tasks: JSON.parse(u.tasks||"{}") };
+            fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).catch(e=>console.log(e));
+        }
+
+        function saveTrainingData(targetKey, newSkills, newTasks) {
+            let target = targetKey === user.key ? user : teamData.find(x => x.key === targetKey);
+            if(newSkills) target.skills = JSON.stringify(newSkills);
+            if(newTasks) target.tasks = JSON.stringify(newTasks);
+            if(targetKey === user.key) localStorage.setItem('fs_v56', JSON.stringify(user));
+            triggerTrainingSync(targetKey);
+        }
+
+        function checkNotifications() {
+            let dot = document.getElementById('note-dot');
+            if(!dot) return;
+            let uRole = (user.role||"").toLowerCase();
+            let isChief = ['sef', 'chief', 'admin'].includes(uRole);
+            if(!isChief) { dot.style.display = 'none'; return; }
+            let isSuperAdmin = uRole === 'admin';
+
+            let hasNotif = false;
+            teamData.forEach(m => {
+                if(m.key === user.key) return;
+                let isMemChief = ['sef', 'chief'].includes((m.role||"").toLowerCase());
+                let mNotesStr = m.notes || "";
+                let isJsonArray = false;
+                let parsed = null;
+                try { parsed = JSON.parse(mNotesStr); if(Array.isArray(parsed)) isJsonArray = true; } catch(e) {}
+
+                if(isMemChief && isJsonArray) {
+                    parsed.forEach(reqKey => {
+                        let reqMember = teamData.find(tm => tm.key === reqKey);
+                        if(reqMember && (isSuperAdmin || reqMember.crew === user.crew)) hasNotif = true;
+                    });
+                }
+                
+                if((isSuperAdmin || m.crew === user.crew) && !isJsonArray && mNotesStr.trim() !== "") {
+                    hasNotif = true;
+                }
+            });
+
+            dot.style.display = hasNotif ? 'block' : 'none';
+        }
+
+        window.onload = () => {
+            document.body.className = "state-intro";
+            try { let saved = localStorage.getItem('fs_v56'); if(saved) { user = JSON.parse(saved); initApp(); } } catch(e) {}
+        };
+
+        async function executeLogin() {
+            const key = document.getElementById('key').value; if(!key) return;
+            goState("loading");
+            try {
+                const res = await fetch(`${API}?action=login&key=${key}`).then(r=>r.json());
+                if(res.success) {
+                    user = {
+                        key: res.key, name: res.name, role: res.role, crew: res.crew,
+                        skills: res.skills, tasks: res.tasks, photo: res.photo, bio: res.bio, notes: res.notes
+                    }; 
+                    localStorage.setItem('fs_v56', JSON.stringify(user));
+                    goState("success"); setTimeout(() => { initApp(); goState("menu"); }, 800);
+                } else { goState("error"); setTimeout(() => { document.getElementById('key').value = ""; goState("login"); }, 1000); }
+            } catch(e) { goState("error"); setTimeout(() => { document.getElementById('key').value = ""; goState("login"); }, 1000); }
+        }
+
+        function initApp() {
+            try {
+                let uRole = (user.role || "").toLowerCase(); let rLvl = getRoleLevel(user.role);
+                let isSuper = (uRole === 'admin' || uRole === 'sef' || uRole === 'chief');
+                if(isSuper) document.getElementById('reji-actions').style.display = 'flex'; 
+                
+                let pIcon = document.getElementById('profile-icon-wrapper');
+                pIcon.className = `top-icon b-${getRoleClass(user.role)}`;
+                
+                let notesIcon = document.getElementById('notes-icon-wrapper');
+                if(rLvl >= 2) { notesIcon.style.display = 'flex'; } else { notesIcon.style.display = 'none'; }
+
+                updateProfileUI(); loadData();
+            } catch (e) { console.log("Arayüz Başlatma Hatası:", e); }
+        }
+
+        function toggleAdminCrewMenu(e) {
+            e.stopPropagation();
+            let dd = document.getElementById('admin-crew-dropdown');
+            dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function updateAdminCrewSelector() {
+            if(getRoleClass(user.role) !== 'admin') return;
+            let crews = [...new Set(teamData.map(m => m.crew).filter(c => c && c !== "Bağımsız"))].sort();
+            
+            if(!adminSelectedCrew && crews.length > 0) {
+                adminSelectedCrew = crews[0];
+                changeAdminCrew(adminSelectedCrew); 
+                return;
+            }
+
+            let dd = document.getElementById('admin-crew-dropdown');
+            let html = "";
+            crews.forEach(c => {
+                let isSel = (c === adminSelectedCrew);
+                html += `<div style="padding:10px; color:${isSel ? '#000' : '#fff'}; background:${isSel ? 'var(--logo-color)' : 'transparent'}; font-weight:bold; border-radius:6px; cursor:pointer; margin-bottom:5px; text-align:center;" onclick="changeAdminCrew('${escapeJS(c)}')">${escapeHTML(c)}</div>`;
+            });
+            dd.innerHTML = html;
+        }
+
+        function changeAdminCrew(crewName) {
+            adminSelectedCrew = crewName;
+            document.getElementById('admin-crew-dropdown').style.display = 'none';
+            showSync();
+            document.getElementById('sync-text').innerText = 'Ekip Verisi Çekiliyor...';
+            
+            updateAdminCrewSelector(); 
+            
+            Promise.all([
+                fetch(`${API}?action=getAgenda&crew=${encodeURIComponent(crewName)}`).then(r=>r.json()),
+                fetch(`${API}?action=getReji&crew=${encodeURIComponent(crewName)}`).then(r=>r.json())
+            ]).then(results => {
+                agendaData = results[0] || []; agendaData.forEach(row => { if(row.modules) sortModules(row.modules); });
+                rejiData = results[1] || [];
+                if(document.getElementById('Takvim').classList.contains('active')) { setCalendarView(currentView); }
+                if(document.getElementById('Reji').classList.contains('active')) { renderReji(); }
+                hideSync();
+            }).catch(err => { hideSync(); showToast("Veri çekilemedi!"); });
+        }
+
+        function goState(s) { document.body.className = "state-" + s; }
+        
+        function openTab(id, t) { 
+            goState("content"); document.getElementById('page-title').innerText = t; closeAllDetails(); 
+            document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active')); 
+            let tab = document.getElementById(id); if(tab) tab.classList.add('active'); 
+            
+            if (getRoleClass(user.role) === 'admin' && (id === 'Takvim' || id === 'Reji')) {
+                document.getElementById('admin-crew-trigger').style.display = 'block';
+            } else {
+                document.getElementById('admin-crew-trigger').style.display = 'none';
+            }
+            
+            if(id !== 'Takvim') { agendaData.forEach(r => r.conflict = false); document.querySelectorAll('.conflict').forEach(el => el.classList.remove('conflict')); }
+            if(id === 'Egitim') { document.getElementById('edu-main-list').style.display = 'block'; document.getElementById('edu-detail-view').style.display = 'none'; currentOpenSong = null; currentOpenTool = null; openMove = null; renderEgitimMain(); }
+            if(id === 'Profil') updateProfileUI();
+            if(id === 'Team') { document.getElementById('team-render-area').style.display = 'block'; document.getElementById('team-member-profile').style.display = 'none'; if(teamDataLoaded && teamData.length > 0) renderTeamList(); }
+            if(id === 'Gelistir') { setDevMode('move', 'list'); setDevMode('choreo', 'list'); setDevTab('move'); }
+        }
+
+        function closeAllDetails(e) {
+            if(document.body.className === "state-login") goState("intro");
+            if(e && e.target && e.target.closest) {
+                if(!e.target.closest('.schedule-row')) document.querySelectorAll('.schedule-row').forEach(r => r.classList.remove('expanded'));
+                if(!e.target.closest('.grid-container') && !e.target.closest('.grid-detail-row')) { document.querySelectorAll('.grid-detail-row').forEach(r => { r.style.display = 'none'; r.dataset.cellIdx = ""; }); }
+                if(!e.target.closest('.bp-circle.filled') && !e.target.closest('.bp-actions')) { document.querySelectorAll('.bp-actions').forEach(el => el.classList.remove('active')); }
+            }
+            let dd = document.getElementById('admin-crew-dropdown');
+            if(dd && dd.style.display === 'block' && e && e.target && e.target.id !== 'admin-crew-trigger') {
+                dd.style.display = 'none';
+            }
+        }
+
+        function getSafePhotoUrl(photoId) { if (!photoId) return ""; if (photoId.startsWith("http")) return photoId; return `https://lh3.googleusercontent.com/d/${photoId}`; }
+        function getEmbedUrl(url) { 
+            if(!url) return ""; 
+            try {
+                if(url.includes("drive") && url.includes("/d/")) return `https://drive.google.com/file/d/${url.split('/d/')[1].split('/')[0]}/preview`; 
+                if(url.includes("youtu")) { let v = url.split('v=')[1] || url.split('/').pop(); return `https://www.youtube-nocookie.com/embed/${v.split('&')[0]}`; } 
+            } catch(e){} return url; 
+        }
+
+        // ==========================================
+        //         PROFİL & NOTLAR & TRANSFER
+        // ==========================================
+        function updateProfileUI() {
+            const pIconImg = document.getElementById('profile-icon-img'); const pIconFallback = document.getElementById('profile-icon-fallback');
+            let safeUrl = getSafePhotoUrl(user.photo);
+            if(safeUrl) { pIconImg.src = safeUrl; pIconImg.style.display = 'block'; pIconFallback.style.display = 'none'; }
+            else { pIconImg.style.display = 'none'; pIconFallback.style.display = 'block'; }
+            
+            let rClass = getRoleClass(user.role);
+            let pIcon = document.getElementById('profile-icon-wrapper');
+            pIcon.className = `top-icon b-${rClass}`;
+
+            const pArea = document.getElementById('profile-render-area');
+            let photoHtml = safeUrl ? `<img src="${safeUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` : `<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; background:#111; border-radius:50%;">👤</div>`;
+            
+            let choreoHtml = ""; let skills = getUserSkills(user.key);
+            
+            if(educationData.length > 0) {
+                educationData.forEach(c => {
+                    let choreoId = `${c.tool}_${c.song}`;
+                    if (skills[choreoId] === 1) choreoHtml += `<span class="skill-tag" style="border:1px solid var(--logo-color); color:var(--logo-color); background:transparent; font-weight:bold;">${escapeHTML(c.song)}</span>`;
+                    else if (skills[choreoId] === 0) choreoHtml += `<span class="skill-tag" style="border:1px solid #777; color:#ccc; background:transparent;">${escapeHTML(c.song)}</span>`;
+                });
+            }
+            if(choreoHtml === "") choreoHtml = `<span style="color:#666; font-style:italic;">Henüz başlanan koreografi yok.</span>`;
+
+            let bioHtml = user.bio ? `<p class="bio-text">${escapeHTML(user.bio)}</p>` : `<p class="bio-text" style="font-style:italic; color:#666;">Kendinden bahsetmek ister misin?</p>`;
+
+            pArea.innerHTML = `
+                <div class="prof-header" style="position:relative; margin-bottom: 30px;">
+                    <div style="position:relative; display:inline-block; margin-bottom:15px;">
+                        <div class="prof-avatar b-${rClass}" onclick="document.getElementById('profile-upload').click()" style="cursor:pointer; z-index:10; margin:0 auto; box-sizing:border-box;">
+                            ${photoHtml}
+                            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); text-align:center; font-size:0.75rem; font-weight:bold; padding:4px 0; color:white;">📷 Seç</div>
+                        </div>
+                        <div class="badge-${rClass}" style="position:absolute; bottom:-12px; left:50%; transform:translateX(-50%); padding:4px 15px; border-radius:20px; font-weight:900; font-size:0.75rem; text-transform:uppercase; z-index:15; white-space:nowrap;">
+                            ${escapeHTML(user.role)}
+                        </div>
+                    </div>
+                    <h2 class="prof-name">${escapeHTML(user.name)}</h2>
+                    ${user.crew ? `<div style="color:#aaa; font-weight:bold; font-size:0.85rem; margin-top:3px; letter-spacing:1px; text-transform:uppercase;">${escapeHTML(user.crew)}</div>` : ''}
+                    
+                    <div style="text-align:left; background:#1a1a1a; padding:15px; border-radius:10px; margin-top:25px;">
+                        <div style="color:var(--logo-color); font-weight:bold; font-size:1rem; margin-bottom:8px; border-bottom:1px dashed #444; padding-bottom:5px;">
+                            Hakkımda <span onclick="openBioEdit()" style="float:right; font-size:0.9rem; cursor:pointer; color:#aaa;">✎ Düzenle</span>
+                        </div>
+                        ${bioHtml}
+                    </div>
+                </div>
+                <div class="prof-section"><h3 class="prof-sec-title">Kütüphane</h3><div>${choreoHtml}</div></div>
+                <div style="margin-top:40px; text-align:center;"><button type="button" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:10px 30px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="logout()">Çıkış Yap</button></div>
+            `;
+            
+            checkNotifications(); 
+        }
+
+        function openNotesModal() {
+            let rLvl = getRoleLevel(user.role); if(rLvl < 2) return; 
+            let uRole = (user.role || "").toLowerCase();
+            let isAuthority = ['admin', 'sef', 'chief'].includes(uRole);
+            let isSuperAdmin = uRole === 'admin';
+            
+            let html = "";
+            if(isAuthority) {
+                let myCrewNotesHtml = "";
+                let otherChiefsNotesHtml = "";
+                let transferRequestsHtml = "";
+
+                teamData.forEach(m => {
+                    if(m.key === user.key) return; 
+                    
+                    let isMemberChief = ['sef', 'chief'].includes((m.role||"").toLowerCase());
+                    let mNotesStr = m.notes || "";
+                    let isJsonArray = false;
+                    let mNotesArray = [];
+
+                    try { 
+                        let parsed = JSON.parse(mNotesStr); 
+                        if(Array.isArray(parsed)) { mNotesArray = parsed; isJsonArray = true; }
+                    } catch(e) {}
+
+                    if (isMemberChief && isJsonArray) {
+                        mNotesArray.forEach(reqKey => {
+                            let reqMember = teamData.find(tm => tm.key === reqKey);
+                            if(reqMember && (isSuperAdmin || reqMember.crew === user.crew)) {
+                                transferRequestsHtml += `
+                                <div style="background:#2a1a1a; border:1px solid var(--logo-color); padding:10px; border-radius:8px; margin-bottom:10px;">
+                                    <div style="color:#fff; margin-bottom:10px; font-size:0.9rem;">
+                                        <strong style="color:var(--logo-color);">${escapeHTML(m.name)}</strong>, <strong style="color:var(--event-color);">${escapeHTML(reqMember.name)}</strong> personelini transfer etmek istiyor.
+                                    </div>
+                                    <div style="display:flex; gap:10px;">
+                                        <button type="button" style="flex:1; background:var(--success); color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="resolveTransfer('${m.key}', '${reqMember.key}', true)">Kabul</button>
+                                        <button type="button" style="flex:1; background:var(--danger); color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="resolveTransfer('${m.key}', '${reqMember.key}', false)">Red</button>
+                                    </div>
+                                </div>`;
+                            }
+                        });
+                    }
+                    
+                    if (!isJsonArray && mNotesStr.trim() !== "") {
+                        let noteCard = `
+                        <div style="background:#111; border:1px solid #333; padding:15px; border-radius:8px; margin-bottom:10px;" id="note-card-${m.key}">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <div style="color:var(--logo-color); font-weight:bold; font-size:1rem;">${escapeHTML(m.name)}</div>
+                                <div style="font-size:0.75rem; color:#888;">${escapeHTML(m.crew)}</div>
+                            </div>
+                            <div style="color:#ccc; font-size:0.95rem; white-space:pre-wrap; margin-bottom:15px;">${escapeHTML(mNotesStr)}</div>
+                            ${isSuperAdmin || m.crew === user.crew ? `<button type="button" class="m-btn cancel" style="width:100%; border:1px solid var(--danger); color:var(--danger); padding:10px; font-size:0.85rem;" onclick="confirmDeleteNote('${m.key}')">Notu Sil</button>` : ''}
+                        </div>`;
+
+                        if (isSuperAdmin || m.crew === user.crew) myCrewNotesHtml += noteCard;
+                        else if (isMemberChief) otherChiefsNotesHtml += noteCard;
+                    }
+                });
+
+                let myCrewTitle = isSuperAdmin ? "Tüm Personel Notları" : "Ekibimin Notları";
+                
+                if(transferRequestsHtml) html += `<h4 style="color:var(--logo-color); text-transform:uppercase; margin:0 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Transfer İstekleri</h4>${transferRequestsHtml}`;
+                if(myCrewNotesHtml) html += `<h4 style="color:var(--logo-color); text-transform:uppercase; margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">${myCrewTitle}</h4>${myCrewNotesHtml}`;
+                if(otherChiefsNotesHtml) html += `<h4 style="color:var(--logo-color); text-transform:uppercase; margin:20px 0 10px 0; border-bottom:1px solid #333; padding-bottom:5px;">Diğer Şeflerin Notları</h4>${otherChiefsNotesHtml}`;
+                
+                if(!html) html = `<div style="text-align:center; color:#666; font-style:italic; padding-top:20px;">Okunacak not veya istek yok.</div>`;
+
+            } else {
+                html += `
+                <h3 style="color:var(--logo-color); text-align:center; margin:0 0 15px 0;">Benim Notlarım</h3>
+                <textarea id="my-notes-inp" class="f-input" style="height:150px; text-align:left; resize:vertical;" placeholder="İş ve görev notlarınızı buraya yazın...">${escapeHTML(user.notes || "")}</textarea>
+                <button type="button" class="m-btn save" style="width:100%; padding:15px; margin-top:15px;" onclick="saveMyNotes()">Kaydet</button>
+                `;
+            }
+            html += `<div class="m-btns" style="margin-top:20px;"><button type="button" class="m-btn cancel" onclick="document.getElementById('notes-modal').style.display='none'">Kapat</button></div>`;
+            
+            document.getElementById('notes-modal-content').innerHTML = html;
+            document.getElementById('notes-modal').style.display = 'flex';
+        }
+
+        function resolveTransfer(requesterKey, memberKey, isAccepted) {
+            let reqChief = teamData.find(u => u.key === requesterKey);
+            if(!reqChief) return;
+            
+            let reqList = [];
+            try { reqList = JSON.parse(reqChief.notes); } catch(e) {}
+            if(!Array.isArray(reqList)) reqList = [];
+            reqList = reqList.filter(k => k !== memberKey);
+            reqChief.notes = JSON.stringify(reqList);
+            
+            if (isAccepted) {
+                let member = teamData.find(u => u.key === memberKey);
+                if (member) member.crew = reqChief.crew;
+            }
+
+            let actionText = isAccepted ? 'Kabul Edildi' : 'Reddedildi';
+            showToast("Transfer " + actionText, true);
+            
+            openNotesModal(); 
+            checkNotifications(); 
+            if(document.getElementById('Team').classList.contains('active')) renderTeamList();
+
+            let payload = { action: 'resolveTransfer', requesterKey: requesterKey, memberKey: memberKey, isAccepted: isAccepted };
+            fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).catch(e=>console.log(e));
+        }
+
+        function requestTransfer(memberKey, e) {
+            if(e) e.stopPropagation();
+            let reqList = [];
+            try { reqList = user.notes ? JSON.parse(user.notes) : []; } catch(err) { reqList = []; }
+            if(!Array.isArray(reqList)) reqList = [];
+            
+            if(!reqList.includes(memberKey)) {
+                reqList.push(memberKey);
+                user.notes = JSON.stringify(reqList);
+                localStorage.setItem('fs_v56', JSON.stringify(user));
+                showToast("Transfer isteği gönderildi!", true);
+                renderTeamMemberProfile(memberKey); 
+                
+                fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({action: 'updateNotes', key: user.key, notes: user.notes}) }).catch(err => console.log(err));
+            }
+        }
+        
+        function directTransfer(memberKey, e) {
+            if(e) e.stopPropagation();
+            let member = teamData.find(u => u.key === memberKey);
+            if(member) {
+                member.crew = user.crew;
+                showToast("Ekibe Alındı!", true);
+                renderTeamMemberProfile(memberKey);
+                if(document.getElementById('Team').classList.contains('active')) renderTeamList();
+                
+                fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({action: 'updateUserCrew', key: memberKey, crew: user.crew}) }).catch(e=>console.log(e));
+            }
+        }
+
+        function saveMyNotes() {
+            let n = document.getElementById('my-notes-inp').value; user.notes = n; localStorage.setItem('fs_v56', JSON.stringify(user));
+            showSync(); fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({action: 'updateNotes', key: user.key, notes: n}) }).then(r=>r.json()).then(()=>{hideSync(); document.getElementById('notes-modal').style.display='none'; showToast("Notlar Kaydedildi", true);}).catch(e=>console.log(e));
+        }
+
+        function confirmDeleteNote(memberKey) {
+            let el = document.getElementById(`note-card-${memberKey}`);
+            if (el) el.style.display = 'none'; 
+            
+            let member = teamData.find(u => u.key === memberKey); 
+            if(member) member.notes = "";
+            showToast("Not Silindi", true); 
+            checkNotifications();
+            
+            fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({action: 'updateNotes', key: memberKey, notes: ""}) }).catch(e=>console.log(e));
+        }
+
+        function handlePhotoSelect(event) {
+            const file = event.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('crop-modal').style.display = 'flex'; const el = document.getElementById('croppie-container');
+                if(croppieInstance) { croppieInstance.destroy(); }
+                croppieInstance = new Croppie(el, { viewport: { width: 220, height: 220, type: 'circle' }, boundary: { width: '100%', height: 300 }, showZoomer: true, enableOrientation: true });
+                croppieInstance.bind({ url: e.target.result });
+            }
+            reader.readAsDataURL(file); event.target.value = ""; 
+        }
+        function closeCropModal() { document.getElementById('crop-modal').style.display = 'none'; if(croppieInstance) { croppieInstance.destroy(); croppieInstance = null; } }
+        function saveCroppedImage() {
+            if(!croppieInstance) return;
+            croppieInstance.result({ type: 'base64', size: {width: 250, height: 250}, format: 'jpeg', quality: 0.6 }).then(function(base64) {
+                closeCropModal(); showSync(); document.getElementById('sync-text').innerText = 'Fotoğraf Yükleniyor...';
+                const payload = { action: 'uploadProfilePhoto', key: user.key, base64: base64 };
+                fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) })
+                .then(r=>r.json()).then(res => {
+                    if(res.success) { user.photo = res.fileId; localStorage.setItem('fs_v56', JSON.stringify(user)); updateProfileUI(); hideSync(); } else { alert("Hata"); hideSync(); }
+                }).catch(e => { console.log(e); hideSync(); });
+            });
+        }
+
+        function openBioEdit() { document.getElementById('p-bio-inp').value = user.bio || ""; document.getElementById('prof-edit-modal').style.display = 'flex'; }
+        function saveBioEdit() {
+            let nBio = document.getElementById('p-bio-inp').value.trim(); document.getElementById('prof-edit-modal').style.display = 'none';
+            user.bio = nBio; localStorage.setItem('fs_v56', JSON.stringify(user)); updateProfileUI(); showSync();
+            const payload = { action: 'updateProfileBio', key: user.key, bio: nBio };
+            fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).then(r=>r.json()).then(hideSync).catch(e=>console.log(e));
+        }
+
+        // ADMIN EKİPLERİ MENÜYE YÜKLE
+        function updateAdminCrewSelector() {
+            if(getRoleClass(user.role) !== 'admin') return;
+            let crews = [...new Set(teamData.map(m => m.crew).filter(c => c && c !== "Bağımsız"))].sort();
+            
+            if(!adminSelectedCrew && crews.length > 0) {
+                adminSelectedCrew = crews[0];
+                changeAdminCrew(adminSelectedCrew); 
+                return;
+            }
+
+            let dd = document.getElementById('admin-crew-dropdown');
+            let html = "";
+            crews.forEach(c => {
+                let isSel = (c === adminSelectedCrew);
+                html += `<div style="padding:10px; color:${isSel ? '#000' : '#fff'}; background:${isSel ? 'var(--logo-color)' : 'transparent'}; font-weight:bold; border-radius:6px; cursor:pointer; margin-bottom:5px; text-align:center;" onclick="changeAdminCrew('${escapeJS(c)}')">${escapeHTML(c)}</div>`;
+            });
+            dd.innerHTML = html;
+        }
+
+        async function loadData() {
+            showSync(); document.getElementById('sync-text').innerText = 'Veriler Yükleniyor...';
+            try {
+                const roleP = encodeURIComponent(user.role || ""); 
+                const crewP = encodeURIComponent(adminSelectedCrew || user.crew || "");
+                const res = await fetch(`${API}?action=getAllData&role=${roleP}&crew=${crewP}`).then(r=>r.json());
+                if(res.success === false || !res.allUsers) throw new Error("Fallback needed");
+                
+                allUsersData = res.allUsers || [];
+                teamData = res.team || []; teamDataLoaded = true;
+                agendaData = res.agenda || []; agendaData.forEach(row => { if(row.modules) sortModules(row.modules); }); setCalendarView('week'); 
+                rejiData = res.reji || []; renderReji(); 
+                libraryData = res.library || []; toolData = res.tool || []; educationData = res.education || []; 
+                
+                updateAdminCrewSelector();
+                updateProfileUI();
+                if(document.getElementById('Egitim').classList.contains('active')) renderEgitimMain();
+                if(document.getElementById('Team').classList.contains('active')) renderTeamList();
+                hideSync();
+            } catch (e) {
+                console.log("Tekil Paket Başarısız, Yedek Motor Devrede:", e);
+                const roleP = encodeURIComponent(user.role || ""); 
+                const crewP = encodeURIComponent(adminSelectedCrew || user.crew || "");
+                Promise.all([
+                    fetch(`${API}?action=getAllUsersBasic`).then(r=>r.json()),
+                    fetch(`${API}?action=getTeamData&role=${roleP}&crew=${crewP}`).then(r=>r.json()),
+                    fetch(`${API}?action=getAgenda&crew=${crewP}`).then(r=>r.json()),
+                    fetch(`${API}?action=getReji&crew=${crewP}`).then(r=>r.json()),
+                    fetch(`${API}?action=getLibrary`).then(r=>r.json()),
+                    fetch(`${API}?action=getTool`).then(r=>r.json()),
+                    fetch(`${API}?action=getEducation`).then(r=>r.json())
+                ]).then(results => {
+                    allUsersData = results[0] || [];
+                    teamData = results[1] || []; teamDataLoaded = true;
+                    agendaData = results[2] || []; agendaData.forEach(row => { if(row.modules) sortModules(row.modules); }); setCalendarView('week');
+                    rejiData = results[3] || []; renderReji();
+                    libraryData = results[4] || []; toolData = results[5] || []; educationData = results[6] || [];
+                    updateAdminCrewSelector();
+                    updateProfileUI();
+                    if(document.getElementById('Egitim').classList.contains('active')) renderEgitimMain();
+                    if(document.getElementById('Team').classList.contains('active')) renderTeamList();
+                    hideSync();
+                }).catch(err => { hideSync(); showToast("Veri bağlantısı kurulamadı!"); });
+            }
+        }
+
+        // ==========================================
+        //         EKİP (CREW) YÖNETİMİ
+        // ==========================================
+        function openTeamView() {
+            adminViewingUserKey = null; openTab('Team', 'CREW');
+            if(teamDataLoaded) { renderTeamList(); } 
+        }
+
+        function renderTeamList() {
+            const area = document.getElementById('team-render-area');
+            if(!teamData || teamData.length === 0) { area.innerHTML = `<div style="text-align:center; color:#888;">Ekip üyesi bulunamadı.</div>`; return; }
+            
+            let uRole = (user.role || "").toLowerCase();
+            let isAuthority = ['admin', 'sef', 'chief'].includes(uRole);
+            let myLvl = getRoleLevel(user.role);
+            
+            let allowedRoles = ['chief', 'sef', 'global', 'senior', 'junior', 'fresh'];
+            let filteredTeam = teamData.filter(m => {
+                let rc = getRoleClass(m.role);
+                if(!allowedRoles.includes(rc)) return false; 
+                let mLvl = getRoleLevel(m.role);
+                if (isAuthority && uRole !== 'admin' && mLvl > myLvl) return false;
+                return true;
+            });
+
+            let groups = {};
+            filteredTeam.forEach(m => {
+                let c = (m.crew && m.crew.trim() !== "") ? m.crew : "Bağımsız";
+                if(!groups[c]) groups[c] = [];
+                groups[c].push(m);
+            });
+
+            let sortedCrews = Object.keys(groups).sort((a, b) => {
+                if (a === user.crew) return -1;
+                if (b === user.crew) return 1;
+                if (a === "Bağımsız") return 1;
+                if (b === "Bağımsız") return -1;
+                return a.localeCompare(b);
+            });
+
+            let html = "";
+            sortedCrews.forEach(cName => {
+                groups[cName].sort((a,b) => getRoleLevel(b.role) - getRoleLevel(a.role));
+                html += `<div style="color:var(--logo-color); font-weight:bold; font-size:1rem; margin-top:20px; margin-bottom:10px; text-transform:uppercase; border-bottom:1px solid #333; padding-bottom:5px;">${escapeHTML(cName)}</div>`;
+                
+                groups[cName].forEach(member => {
+                    let safeUrl = getSafePhotoUrl(member.photo); let photoHtml = safeUrl ? `<img src="${safeUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` : `<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; background:#111; border-radius:50%;">👤</div>`;
+                    let rClass = getRoleClass(member.role); 
+                    
+                    html += `
+                    <div class="team-member-card" onclick="renderTeamMemberProfile('${member.key}')">
+                        <div class="tm-avatar b-${rClass}" style="box-sizing: border-box;">${photoHtml}</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:bold; font-size:1.1rem; color:#fff;">${escapeHTML(member.name)}</div>
+                            <div style="font-size:0.85rem; color:#aaa; font-weight:bold; letter-spacing:1px; text-transform:uppercase;">${escapeHTML(member.role)}</div>
+                        </div>
+                        <div style="color:var(--logo-color);">İncele ➝</div>
+                    </div>
+                    `;
+                });
+            });
+            area.innerHTML = html;
+        }
+
+        function renderTeamMemberProfile(memberKey) {
+            let member = teamData.find(u => u.key === memberKey); if(!member) return;
+            
+            adminViewingUserKey = memberKey; document.getElementById('team-render-area').style.display = 'none';
+            const profileArea = document.getElementById('team-member-profile'); profileArea.style.display = 'block';
+            
+            let safeUrl = getSafePhotoUrl(member.photo); let photoHtml = safeUrl ? `<img src="${safeUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` : `<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; background:#111; border-radius:50%;">👤</div>`;
+            let bioHtml = member.bio ? `<p class="bio-text">${escapeHTML(member.bio)}</p>` : `<p class="bio-text" style="font-style:italic; color:#666;">Biyografi boş.</p>`;
+            let rClass = getRoleClass(member.role);
+            let roleLvl = getRoleLevel(user.role); 
+            let uRole = (user.role || "").toLowerCase();
+            let isChief = ['sef', 'chief', 'admin'].includes(uRole);
+            
+            let isOtherCrew = member.crew !== user.crew;
+            let reqList = [];
+            try { reqList = user.notes ? JSON.parse(user.notes) : []; } catch(e) { reqList = []; }
+            if(!Array.isArray(reqList)) reqList = [];
+            
+            let transferBtnHtml = "";
+            if (isChief && isOtherCrew && getRoleLevel(member.role) <= roleLvl) {
+                let isBagimsiz = (!member.crew || member.crew.trim() === "" || member.crew === "Bağımsız");
+                if (isBagimsiz) {
+                    transferBtnHtml = `<button type="button" style="position:absolute; top:0; right:0; background:var(--success); color:#fff; border:none; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:0.75rem; cursor:pointer;" onclick="directTransfer('${memberKey}', event)">Ekibe Al</button>`;
+                } else {
+                    let hasRequested = reqList.includes(memberKey);
+                    if (hasRequested) {
+                        transferBtnHtml = `<button type="button" style="position:absolute; top:0; right:0; background:#444; color:#fff; border:1px solid #555; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:0.75rem;" disabled>İstek Gönderildi</button>`;
+                    } else {
+                        transferBtnHtml = `<button type="button" style="position:absolute; top:0; right:0; background:var(--logo-color); color:#000; border:none; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:0.75rem; cursor:pointer;" onclick="requestTransfer('${memberKey}', event)">Transfer İste</button>`;
+                    }
+                }
+            }
+            
+            let skills = getUserSkills(memberKey); let choreoHtml = "";
+
+            if(roleLvl >= 4 || isChief) { 
+                let isOwnCrew = member.crew === user.crew;
+                let isSuperAdmin = ['admin'].includes(uRole);
+                let canSeeLibraryDetail = isOwnCrew || isSuperAdmin;
+
+                educationData.forEach((c, idx) => {
+                    let choreoId = `${c.tool}_${c.song}`; let state = skills[choreoId];
+                    if (state === 0 || state === 1) {
+                        let tickClass = (state === 1) ? "state-1" : "state-0"; 
+                        let rightHtml = `<div class="fs-checkbox ${tickClass}" onclick="toggleChoreoTick(${idx}, event)"></div>`;
+                        choreoHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #333;"><span>${escapeHTML(c.song)}</span>${rightHtml}</div>`;
+                    }
+                });
+                if(choreoHtml === "") choreoHtml = `<div style="color:#666; font-style:italic;">Gösterilecek hazır koreografi yok.</div>`;
+                
+                if (canSeeLibraryDetail) {
+                    choreoHtml = `<div class="prof-section"><h3 class="prof-sec-title" onclick="openTab('Egitim', '${escapeHTML(member.name.toUpperCase())}');" style="cursor:pointer; display:flex; justify-content:space-between; background:#222; padding:10px; border-radius:8px;">Kütüphane <span style="font-size:0.9rem; color:#fff;">Tümünü Gör ➝</span></h3><div style="margin-top:10px;">${choreoHtml}</div></div>`;
+                } else {
+                    choreoHtml = `<div class="prof-section"><h3 class="prof-sec-title" style="display:flex; justify-content:space-between; background:#222; padding:10px; border-radius:8px;">Kütüphane</h3><div style="margin-top:10px;">${choreoHtml}</div></div>`;
+                }
+            }
+
+            profileArea.innerHTML = `
+                <div class="back-ui-btn" onclick="document.getElementById('team-member-profile').style.display='none'; document.getElementById('team-render-area').style.display='block';">
+                    <div class="back-ui-icon">←</div><span class="back-ui-text">EKİBE DÖN</span>
+                </div>
+                <div class="prof-header" style="margin-bottom:30px; margin-top:20px; position:relative;">
+                    ${transferBtnHtml}
+                    <div style="position:relative; display:inline-block; margin-bottom:15px;">
+                        <div class="prof-avatar b-${rClass}" style="margin:0 auto; box-sizing: border-box;">${photoHtml}</div>
+                        <div class="badge-${rClass}" style="position:absolute; bottom:-12px; left:50%; transform:translateX(-50%); padding:4px 15px; border-radius:20px; font-weight:900; font-size:0.75rem; text-transform:uppercase; z-index:15; white-space:nowrap;">${escapeHTML(member.role)}</div>
+                    </div>
+                    <h2 class="prof-name">${escapeHTML(member.name)}</h2>
+                    <div style="color:#aaa; font-weight:bold; font-size:0.85rem; margin-top:3px; letter-spacing:1px; text-transform:uppercase;">${escapeHTML(member.crew || 'Bağımsız')}</div>
+                    <div style="text-align:left; background:#1a1a1a; padding:15px; border-radius:10px; margin-top:25px;">
+                        <div style="color:var(--logo-color); font-weight:bold; font-size:1rem; margin-bottom:8px; border-bottom:1px dashed #444; padding-bottom:5px;">Hakkında</div>
+                        ${bioHtml}
+                    </div>
+                </div>
+                ${choreoHtml}
+            `;
+        }
+
+        // ==========================================
+        //         EĞİTİM YÖNETİMİ & VİDEO OYNATMA
+        // ==========================================
+        function toggleChoreoTick(cIdx, e) {
+            if(e) e.stopPropagation(); 
+            let targetKey = adminViewingUserKey || user.key;
+            let skills = getUserSkills(targetKey); let tasks = getUserTasks(targetKey); 
+            
+            let cObj = educationData[cIdx]; if(!cObj) return;
+            let choreoId = `${cObj.tool}_${cObj.song}`; let state = skills[choreoId]; 
+            
+            let uRole = (user.role || "").toLowerCase();
+            let isAuthority = ['admin', 'sef', 'chief'].includes(uRole) && targetKey !== user.key;
+
+            if (isAuthority) {
+                if(state === 0 || state === undefined) {
+                    skills[choreoId] = 1; 
+                    if(cObj.list) String(cObj.list).split(',').map(s=>s.trim()).filter(s=>s).forEach(m => tasks[m] = 1);
+                } else if(state === 1) delete skills[choreoId]; 
+            } else {
+                if(state === 1) return;
+                if(state === 0) delete skills[choreoId]; else skills[choreoId] = 0;
+            }
+            saveTrainingData(targetKey, skills, tasks);
+            
+            if (document.getElementById('edu-detail-view').style.display === 'block') renderSongDetail(); else renderEgitimMain();
+            if(adminViewingUserKey && document.getElementById('team-member-profile').style.display === 'block') renderTeamMemberProfile(adminViewingUserKey);
+        }
+
+        function toggleMoveTick(mId, e) {
+            if(e) e.stopPropagation(); 
+            let targetKey = adminViewingUserKey || user.key;
+            let tasks = getUserTasks(targetKey); let state = tasks[mId];
+            let uRole = (user.role || "").toLowerCase();
+            let isAuthority = ['admin', 'sef', 'chief'].includes(uRole) && targetKey !== user.key;
+
+            if (isAuthority) {
+                if(state === 0 || state === undefined) tasks[mId] = 1;
+                else if(state === 1) delete tasks[mId];
+            } else {
+                if(state === 1) return;
+                if(state === 0) delete tasks[mId]; else tasks[mId] = 0;
+            }
+            saveTrainingData(targetKey, null, tasks); renderSongDetail();
+        }
+
+        function toggleTool(tIdx) { 
+            let tool = toolData[tIdx].tool;
+            openTool = (openTool === tool) ? null : tool; 
+            renderEgitimMain(); 
+        }
+
+        function renderEgitimMain() {
+            try {
+                let uRole = (user.role || "").toLowerCase();
+                let isSuper = ['admin', 'sef', 'chief'].includes(uRole);
+                if (isSuper) {
+                    document.getElementById('dev-button-container').style.display = adminViewingUserKey ? 'none' : 'block';
+                }
+
+                const area = document.getElementById('edu-main-list');
+                if (!toolData || toolData.length === 0) { 
+                    area.innerHTML = `<div style='text-align:center; color:#888; padding:20px;'>Eğitim verisi bulunamadı.</div>`; 
+                    return; 
+                }
+                
+                let targetKey = adminViewingUserKey || user.key; 
+                let html = ""; 
+                let skills = getUserSkills(targetKey); 
+                let userLvl = getRoleLevel(user.role);
+
+                toolData.forEach((tData, tIdx) => {
+                    let tool = String(tData.tool); 
+                    let tRate = parseInt(tData.rate) || 1;
+                    
+                    if(targetKey === user.key && userLvl < tRate) return; 
+                    
+                    let isOpen = (openTool === tool);
+                    
+                    html += `
+                    <div class="edu-tool-card" style="margin-bottom: ${isOpen ? '0' : '8px'}; border-bottom-left-radius: ${isOpen ? '0' : '8px'}; border-bottom-right-radius: ${isOpen ? '0' : '8px'};">
+                        <div class="edu-tool-header" onclick="toggleTool(${tIdx})">${escapeHTML(tool)}</div>
+                    </div>
+                    `;
+                    
+                    if (isOpen) {
+                        html += `<div class="edu-choreo-list active" style="margin-bottom:15px; border-bottom-left-radius:8px; border-bottom-right-radius:8px; border-left: 4px solid var(--logo-color);">`;
+                        html += `<div class="edu-choreo-row" style="cursor:pointer;" onclick="openSongDetail(${tIdx}, -1)"><div class="edu-c-title" style="color:var(--logo-color);">Tüm Hareketler</div><div><span style="color:var(--logo-color); font-size:0.9rem;">İncele ➝</span></div></div>`;
+
+                        let choreos = educationData.filter(e => e.tool === tool);
+                        if (choreos.length === 0) { html += `<div class="edu-choreo-row"><div class="edu-c-title" style="color:#666; font-style:italic;">Koreografi Eklenmemiş</div></div>`; }
+
+                        choreos.forEach((c) => {
+                            let cIdx = educationData.indexOf(c);
+                            let moveListStr = c.list || ""; 
+                            let percent = getProgressPercent(moveListStr, targetKey);
+                            let choreoId = `${tool}_${c.song}`;
+                            let state = skills[choreoId]; 
+                            
+                            let rightSideHtml = "";
+                            if (percent === 100 || !moveListStr.trim()) {
+                                let tickClass = ""; 
+                                if(state === 0) tickClass = "state-0"; 
+                                else if(state === 1) tickClass = "state-1"; 
+                                rightSideHtml = `<div class="fs-checkbox ${tickClass}" onclick="toggleChoreoTick(${cIdx}, event)"></div>`;
+                            } else { 
+                                rightSideHtml = `<div style="width:70px; text-align:right;"><div class="edu-progress-bg"><div class="edu-progress-bar" style="width:${percent}%"></div></div></div>`; 
+                            }
+                            
+                            html += `<div class="edu-choreo-row" style="cursor:pointer;" onclick="openSongDetail(${tIdx}, ${cIdx})"><div class="edu-c-title">${escapeHTML(c.song)}</div><div>${rightSideHtml}</div></div>`;
+                        });
+                        html += `</div>`;
+                    }
+                });
+                area.innerHTML = html;
+            } catch(e) { console.error("Egitim Render Hata: ", e); document.getElementById('edu-main-list').innerHTML = `<div style="color:red; padding:20px;">Hata: ${e.message}</div>`; }
+        }
+
+        let currentOpenSong = null; let currentOpenTool = null;
+        function openSongDetail(tIdx, cIdx) {
+            currentOpenTool = toolData[tIdx].tool; 
+            if(cIdx === -1) { currentOpenSong = 'Tüm Hareketler'; } else { currentOpenSong = educationData[cIdx].song; }
+            openMove = null; document.getElementById('edu-main-list').style.display = 'none'; document.getElementById('edu-detail-view').style.display = 'block'; renderSongDetail();
+        }
+        function toggleMoveAccordion(indexId) { openMove = (openMove === indexId) ? null : indexId; renderSongDetail(); }
+
+        function renderSongDetail() {
+            try {
+                const area = document.getElementById('edu-detail-view');
+                let targetKey = adminViewingUserKey || user.key;
+                let isAllMoves = (currentOpenSong === 'Tüm Hareketler');
+                let movesStr = ""; let choreoUrl = "";
+                
+                if(isAllMoves) { 
+                    let t = toolData.find(x => x.tool === currentOpenTool); 
+                    if(t) movesStr = t.moves.join(','); 
+                } 
+                else { 
+                    let choreo = educationData.find(e => e.tool === currentOpenTool && e.song === currentOpenSong); 
+                    if(choreo) { movesStr = choreo.list || ""; choreoUrl = choreo.url || ""; } 
+                }
+
+                let playBtnHtml = "";
+                if (!isAllMoves && choreoUrl && choreoUrl.trim() !== "") {
+                    let isChoreoYoutube = choreoUrl.includes("youtu");
+                    let cBtnAction = isChoreoYoutube
+                        ? `window.open('${choreoUrl}', '_blank')`
+                        : `document.getElementById('vid-frame').src='${getEmbedUrl(choreoUrl)}'; document.getElementById('media-overlay').style.display='block';`;
+
+                    playBtnHtml = `<div onclick="${cBtnAction}" style="color:var(--logo-color); font-size:1.8rem; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0 15px; transform:scale(1.2);">▶</div>`;
+                }
+
+                let html = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px; border-bottom:1px dashed #333; margin-bottom:15px;">
+                        <div onclick="document.getElementById('edu-detail-view').style.display='none'; document.getElementById('edu-main-list').style.display='block'; currentOpenSong=null; currentOpenTool=null;" style="cursor:pointer; font-size:1.2rem; font-weight:900; color:var(--logo-color); text-transform:uppercase; flex:1; text-align:left;">${escapeHTML(currentOpenTool)}</div>
+                        ${playBtnHtml}
+                        <div style="font-size:1.1rem; font-weight:bold; color:#fff; flex:1; text-align:right;">${escapeHTML(currentOpenSong)}</div>
+                    </div>
+                `;
+
+                let moves = []; if(movesStr) moves = String(movesStr).split(',').map(s=>s.trim()).filter(s=>s);
+                let tasks = getUserTasks(targetKey);
+
+                if (moves.length === 0) { html += `<div style="color:#666; font-style:italic; text-align:center; margin-top:20px;">Hareket listesi boş.</div>`; } 
+                else {
+                    moves.forEach((mId, index) => {
+                        let lib = libraryData.find(l => l.id && l.id.toString().toLowerCase() === mId.toLowerCase());
+                        let mName = lib ? lib.name : mId; let mDesc = lib ? lib.desc : ""; let mUrlOriginal = lib ? lib.url : "";
+                        
+                        let isLibYoutube = mUrlOriginal.includes("youtu");
+                        let libBtnAction = isLibYoutube
+                            ? `window.open('${mUrlOriginal}', '_blank')`
+                            : `document.getElementById('vid-frame').src='${getEmbedUrl(mUrlOriginal)}'; document.getElementById('media-overlay').style.display='block';`;
+
+                        let state = tasks[mId]; let tickClass = "";
+                        if(state === 0) tickClass = "state-0"; else if(state === 1) tickClass = "state-1";
+                        let uniqueMoveId = String(index); let isOpen = (openMove === uniqueMoveId);
+                        let checkboxHtml = `<div class="fs-checkbox ${tickClass}" onclick="toggleMoveTick('${mId}', event)"></div>`;
+
+                        html += `
+                        <div class="move-card" style="${state === 1 ? 'border-left-color:var(--logo-color);' : ''}">
+                            <div class="move-c-header" onclick="toggleMoveAccordion('${uniqueMoveId}')">
+                                <div style="flex:1;"><div class="move-title" style="${state===1 ? 'color:var(--logo-color);' : ''}">${escapeHTML(mName)}</div></div>
+                                ${checkboxHtml}
+                            </div>
+                            <div class="move-c-body ${isOpen ? 'active' : ''}">
+                                ${mDesc ? `<div class="move-desc">${escapeHTML(mDesc)}</div>` : ''}
+                                ${mUrlOriginal ? `<button type="button" class="m-btn save" style="width:100%; padding:10px; font-size:0.9rem;" onclick="${libBtnAction}">▶ Hareketi İzle</button>` : ''}
+                            </div>
+                        </div>`;
+                    });
+                } area.innerHTML = html;
+            } catch(e) { console.error("Şarkı Detay Hata:", e); document.getElementById('edu-detail-view').innerHTML = `<div style="color:var(--danger); padding:20px; text-align:center;">Kart oluşturulurken hata: ${e.message}</div>`; }
+        }
+
+        // ==========================================
+        //         GELİŞTİR (DEVELOP)
+        // ==========================================
+        function setDevTab(type) {
+            document.getElementById('btn-dev-move').classList.toggle('active', type==='move');
+            document.getElementById('btn-dev-choreo').classList.toggle('active', type==='choreo');
+            document.getElementById('dev-move-form').style.display = type==='move' ? 'block' : 'none';
+            document.getElementById('dev-choreo-form').style.display = type==='choreo' ? 'block' : 'none';
+
+            if(type === 'move') {
+                let html = ""; toolData.forEach(t => { html += `<div class="dev-tool-chip" onclick="this.classList.toggle('active')">${escapeHTML(t.tool)}</div>`; }); document.getElementById('dm-list-wrap').innerHTML = html;
+            } else if (type === 'choreo') {
+                let opt = `<option value="">-- Tool Seç --</option>`; toolData.forEach(t => { opt += `<option value="${escapeHTML(t.tool)}">${escapeHTML(t.tool)}</option>`; }); opt += `<option value="NEW_TOOL">[+] Yeni Ekle</option>`; document.getElementById('dev-c-tool').innerHTML = opt; renderDevChoreoMoves();
+            }
+        }
+
+        function saveDevMove() {
+            let activeTools = []; document.querySelectorAll('#dm-list-wrap .active').forEach(el => activeTools.push(el.innerText)); 
+            let isNewTool = (document.getElementById('dm-tog-new').style.color === 'rgb(0, 0, 0)' || document.getElementById('dm-tog-new').style.color === 'var(--logo-color)' && document.getElementById('dm-new-wrap').style.display === 'block');
+            let newToolName = ""; let newToolRate = "1";
+            if(isNewTool) { newToolName = document.getElementById('dm-new-name').value.trim(); newToolRate = document.getElementById('dm-new-rate').value; if(!newToolName) { showToast("Yeni tool ismini girin!"); return; } } 
+            else { if(activeTools.length === 0) { showToast("En az bir Tool seçmelisiniz!"); return; } }
+            let mName = document.getElementById('dev-m-name').value.trim(); if(!mName) { showToast("Hareket ismi girin!"); return; }
+            let mDesc = document.getElementById('dev-m-desc').value.trim(); let mUrl = document.getElementById('dev-m-url').value.trim();
+            showSync();
+            let payload = { action: 'addMove', name: mName, desc: mDesc, url: mUrl, tools: activeTools, isNewTool: isNewTool, newToolName: newToolName, newToolRate: newToolRate };
+            fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).then(r=>r.json()).then(res => { hideSync(); if(res.success) { showToast("Başarıyla Eklendi!", true); document.getElementById('dev-m-name').value=""; document.getElementById('dev-m-desc').value=""; document.getElementById('dev-m-url').value=""; loadData(); } }).catch(e=>console.log(e));
+        }
+
+        let devChoreoMoves = [];
+        function checkDevNewTool() { let val = document.getElementById('dev-c-tool').value; document.getElementById('dev-c-new-tool-wrap').style.display = val === 'NEW_TOOL' ? 'block' : 'none'; }
+        function openDevMoveSelectModal() { let opt = `<option value="">-- Tümünü Göster --</option>`; toolData.forEach(t => { opt += `<option value="${escapeHTML(t.tool)}">${escapeHTML(t.tool)}</option>`; }); document.getElementById('dev-ms-tool-filter').innerHTML = opt; renderDevMoveSelectModal(); document.getElementById('dev-move-select-modal').style.display = 'flex'; }
+        function renderDevMoveSelectModal() { let filter = document.getElementById('dev-ms-tool-filter').value; let container = document.getElementById('dev-ms-list'); container.innerHTML = ""; let movesToShow = []; if(filter) { let t = toolData.find(x => x.tool === filter); if(t) movesToShow = t.moves; } else { toolData.forEach(t => movesToShow = movesToShow.concat(t.moves)); movesToShow = [...new Set(movesToShow)]; } if(movesToShow.length === 0) { container.innerHTML = `<div style="color:#666; font-style:italic; text-align:center;">Hareket bulunamadı.</div>`; return; } movesToShow.forEach(mId => { let lib = libraryData.find(l => l.id && l.id.toString().toLowerCase() === mId.toLowerCase()); let mName = lib ? lib.name : mId; container.innerHTML += `<div style="background:#222; padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;"><div><div style="color:#fff; font-weight:bold;">${escapeHTML(mName)}</div></div><button type="button" style="background:var(--logo-color); color:#000; font-weight:bold; border:none; border-radius:4px; padding:6px 12px; cursor:pointer;" onclick="addMoveToDevChoreo('${mId}', '${escapeJS(mName)}')">Ekle</button></div>`; }); }
+        function escapeJS(str) { return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+        function addMoveToDevChoreo(mId, mName) { devChoreoMoves.push({id: mId, name: mName}); renderDevChoreoMoves(); showToast("Eklendi: " + mName, true); }
+        function removeDevChoreoMove(idx) { devChoreoMoves.splice(idx, 1); renderDevChoreoMoves(); }
+
+        let devMoveDragIdx = null;
+        function devMoveDragStart(e, idx) { devMoveDragIdx = idx; e.dataTransfer.setData("text/plain", idx); e.target.style.opacity = '0.5'; }
+        function devMoveDrop(e, targetIdx) { e.preventDefault(); document.querySelectorAll('.dev-choreo-move-row').forEach(r => r.style.opacity = '1'); if(devMoveDragIdx !== null && devMoveDragIdx !== targetIdx) { let item = devChoreoMoves.splice(devMoveDragIdx, 1)[0]; devChoreoMoves.splice(targetIdx, 0, item); renderDevChoreoMoves(); } devMoveDragIdx = null; }
+        function devMoveTouchStart(e, idx) { devMoveDragIdx = idx; const target = e.target.closest('.dev-choreo-move-row'); if(target) target.style.opacity = '0.5'; }
+        function devMoveTouchMove(e) { if(devMoveDragIdx !== null) e.preventDefault(); }
+        function devMoveTouchEnd(e) { if(devMoveDragIdx === null) return; let touch = e.changedTouches[0]; let elem = document.elementFromPoint(touch.clientX, touch.clientY); let row = elem ? elem.closest('.dev-choreo-move-row') : null; if(row && row.dataset.idx) { let targetIdx = parseInt(row.dataset.idx); if(targetIdx !== devMoveDragIdx) { let item = devChoreoMoves.splice(devMoveDragIdx, 1)[0]; devChoreoMoves.splice(targetIdx, 0, item); } } devMoveDragIdx = null; renderDevChoreoMoves(); }
+        function renderDevChoreoMoves() { let container = document.getElementById('dev-c-move-list'); if(devChoreoMoves.length === 0) { container.innerHTML = `<div style="color:#666; font-style:italic; text-align:center; padding:10px;">Henüz hareket eklenmedi.</div>`; return; } let html = ""; devChoreoMoves.forEach((m, idx) => { html += `<div class="dev-choreo-move-row" data-idx="${idx}" draggable="true" ondragstart="devMoveDragStart(event, ${idx})" ondragover="event.preventDefault()" ondrop="devMoveDrop(event, ${idx})" ontouchstart="devMoveTouchStart(event, ${idx})" ontouchmove="devMoveTouchMove(event)" ontouchend="devMoveTouchEnd(event)"><div class="drag-handle"></div><div style="flex:1; color:#fff; font-weight:bold;">${escapeHTML(m.name)}</div><button type="button" style="background:transparent; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer; padding:0 5px;" onclick="removeDevChoreoMove(${idx})">✕</button></div>`; }); container.innerHTML = html; }
+        function saveDevChoreo() { let toolVal = document.getElementById('dev-c-tool').value; let sName = document.getElementById('dev-c-song').value.trim(); if(!toolVal) { showToast("Lütfen bir Tool seçin!"); return; } if(!sName) { showToast("Koreografi ismi girin!"); return; } let isNewTool = (toolVal === 'NEW_TOOL'); let newToolName = ""; let newToolRate = "1"; if(isNewTool) { newToolName = document.getElementById('dev-c-new-tool-name').value.trim(); newToolRate = document.getElementById('dev-c-new-tool-rate').value; if(!newToolName) { showToast("Yeni tool ismini girin!"); return; } } let mList = devChoreoMoves.map(m => m.id); if(mList.length === 0) { showToast("En az 1 hareket ekleyin!"); return; } showSync(); let payload = { action: 'addChoreo', isNewTool: isNewTool, toolName: isNewTool ? newToolName : toolVal, newToolRate: newToolRate, songName: sName, moves: mList }; fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).then(r=>r.json()).then(res => { hideSync(); if(res.success) { showToast("Koreografi Oluşturuldu!", true); document.getElementById('dev-c-song').value=""; devChoreoMoves=[]; renderDevChoreoMoves(); loadData(); } }).catch(e=>console.log(e)); }
+        function setDevMode(tab, mode) { if(tab === 'move') { document.getElementById('dm-tog-list').style.background = mode==='list' ? 'var(--logo-color)' : '#111'; document.getElementById('dm-tog-list').style.color = mode==='list' ? '#000' : 'var(--logo-color)'; document.getElementById('dm-tog-new').style.background = mode==='new' ? 'var(--logo-color)' : '#111'; document.getElementById('dm-tog-new').style.color = mode==='new' ? '#000' : 'var(--logo-color)'; document.getElementById('dm-list-wrap').style.display = mode==='list' ? 'block' : 'none'; document.getElementById('dm-new-wrap').style.display = mode==='new' ? 'block' : 'none'; } }
+
+        // ==========================================
+        //         TAKVİM
+        // ==========================================
+        function triggerSync(modifiedDays) {
+            if(!modifiedDays || modifiedDays.length === 0) { hideSync(); return; }
+            const payload = { action: 'syncDays', days: modifiedDays, crew: adminSelectedCrew || user.crew };
+            fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).then(r => r.json()).then(res => { hideSync(); }).catch(e => { console.log(e); hideSync(); });
+        }
+
+        function setCalendarView(v) { currentView = v; document.getElementById('btn-week').classList.toggle('active', v === 'week'); document.getElementById('btn-month').classList.toggle('active', v === 'month'); closeAllDetails(); renderTakvim(); }
+        
+        function renderTakvim() {
+            const area = document.getElementById('calendar-render-area'); area.innerHTML = ""; const today = new Date(); 
+            let uRole = (user.role||"").toLowerCase(); const isAdmin = ['admin', 'sef', 'chief'].includes(uRole);
+            let todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+            if(currentView === 'week') {
+                for(let i=0; i<14; i++) {
+                    let d = new Date(today); d.setDate(today.getDate() + i); let dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                    let dayNameFull = trDaysFull[d.getDay()]; let dayNameShort = trDaysShort[d.getDay()]; 
+                    let row = agendaData.find(r => r.date === dStr); let isToday = i === 0 ? 'today' : ''; let conflictClass = (row && row.conflict) ? 'conflict' : '';
+
+                    if(row && row.modules && row.modules.length > 0) {
+                        let hasOtel = false; let hasEvent = false; let mainInfoHtml = ""; let detailCardsHtml = "";
+                        row.modules.forEach(m => {
+                            let parsed = parseModule(m);
+                            if (parsed.isOtel) hasOtel = true; else hasEvent = true;
+                            let color = parsed.isOtel ? 'var(--logo-color)' : 'var(--event-color)';
+                            mainInfoHtml += `<div style="color:${color}; font-size:1rem; font-weight:bold;">• ${escapeHTML(parsed.cleanName)}</div>`;
+                            detailCardsHtml += `<div class="module-card ${parsed.isOtel ? 'module-otel' : 'module-event'}"><div class="m-title" style="color:${parsed.isOtel ? 'var(--logo-color)' : 'var(--event-color)'}">${escapeHTML(parsed.cleanName)}</div>${parsed.hasTime ? `<div class="m-time">Saat: ${cleanTime(parsed.showtime)}</div>` : ''}${parsed.desc ? `<div class="m-desc">${escapeHTML(parsed.desc)}</div>` : ''}</div>`;
+                        });
+                        
+                        let linesHtml = ""; 
+                        if(hasOtel) linesHtml += `<div class="day-divider otel"></div>`; 
+                        if(hasEvent) linesHtml += `<div class="day-divider etk"></div>`;
+                        
+                        area.innerHTML += `<div class="schedule-row ${isToday} ${conflictClass}" onclick="toggleWeekDetail(this, event, '${dStr}')"><div class="row-main"><div class="schedule-date-box"><span class="s-day-num">${String(d.getDate()).padStart(2,'0')}</span><span class="s-day-name">${dayNameShort}</span></div><div class="day-divider-box">${linesHtml}</div><div class="s-info">${row.gate && cleanTime(row.gate) !== "null" ? `<div class="gate-badge">Çıkış: ${cleanTime(row.gate)}</div>` : ''}<div style="margin-top:5px;">${mainInfoHtml}</div></div></div><div class="row-detail" onclick="event.stopPropagation()">${isAdmin ? `<button type="button" class="cal-edit-btn" onclick="openDayEdit('${dStr}', '${dayNameFull}', event)">✎ Düzenle</button>` : ''}<div style="margin-top:${isAdmin ? '35px' : '0'};">${detailCardsHtml}</div></div></div>`;
+                    } else {
+                        area.innerHTML += `<div class="schedule-row border-empty ${isToday} ${conflictClass}" onclick="toggleWeekDetail(this, event, '${dStr}')"><div class="row-main"><div class="schedule-date-box"><span class="s-day-num">${String(d.getDate()).padStart(2,'0')}</span><span class="s-day-name">${dayNameShort}</span></div><div class="day-divider-box"><div class="day-divider empty"></div></div><div class="s-info" style="justify-content:center;"><div style="color:#555; font-style:italic; font-weight:bold;">Day Off</div></div></div><div class="row-detail" onclick="event.stopPropagation()">${isAdmin ? `<button type="button" class="cal-edit-btn" onclick="openDayEdit('${dStr}', '${dayNameFull}', event)">✎ Düzenle</button>` : ''}<div style="font-size:0.8rem; color:#888; text-align:center; padding:15px 0; font-style:italic; margin-top:${isAdmin ? '35px' : '0'};">Bu gün için planlanmış bir iş yok.</div></div></div>`;
+                    }
+                }
+            } else {
+                let grouped = {}; agendaData.forEach(d => { let p = d.date.split('-'); let key = `${p[0]}-${p[1]}`; if(!grouped[key]) grouped[key] = []; grouped[key].push(d); });
+                let monthsToRenderList = Object.keys(grouped).sort(); if(monthsToRenderList.length === 0) { let m = String(today.getMonth()+1).padStart(2,'0'); monthsToRenderList.push(`${today.getFullYear()}-${m}`); }
+                monthsToRenderList.forEach(monthKey => {
+                    let y = parseInt(monthKey.split('-')[0]), m = parseInt(monthKey.split('-')[1]) - 1;
+                    let html = `<div class="month-header">${aylar[m]} ${y}</div><div class="grid-container">`;
+                    ['PZT','SAL','ÇAR','PER','CUM','CMT','PAZ'].forEach(h => html += `<div class="grid-h">${h}</div>`);
+                    let firstDayOfMonth = new Date(y, m, 1); let startIdx = firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1;
+                    for(let i=0; i<startIdx; i++) html += `<div class="grid-cell g-empty" style="border:none; background:transparent; cursor:default;"></div>`;
+                    let daysInMonth = new Date(y, m+1, 0).getDate();
+                    for(let i=1; i<=daysInMonth; i++) {
+                        let dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`; let dayNameFull = trDaysFull[new Date(y,m,i).getDay()]; let row = agendaData.find(r => r.date === dStr); let isToday = dStr === todayStr ? 'today' : ''; let conflictClass = (row && row.conflict) ? 'conflict' : '';
+                        if(row && row.modules && row.modules.length > 0) {
+                            let hasOtel = false; let hasEvent = false; let txtLines = "";
+                            row.modules.forEach(m => { let parsed = parseModule(m); if (parsed.isOtel) hasOtel = true; else hasEvent = true; txtLines += `<div class="grid-txt ${parsed.isOtel ? 'otel' : 'etk'}">${escapeHTML(parsed.cleanName)}</div>`; });
+                            
+                            let lineClass = (hasOtel && hasEvent) ? "mix" : (hasOtel ? "otel" : "etk"); 
+                            let linesHtml = `<div class="grid-line ${lineClass}"></div>`;
+                            
+                            html += `<div class="grid-cell ${isToday} ${conflictClass}" onclick="openGridDetail(event, this, '${dStr}', '${dayNameFull}')"><div class="grid-num">${String(i).padStart(2,'0')}</div>${linesHtml}${txtLines}</div>`;
+                        } else html += `<div class="grid-cell g-empty ${isToday} ${conflictClass}" onclick="openGridDetail(event, this, '${dStr}', '${dayNameFull}')"><div class="grid-num">${String(i).padStart(2,'0')}</div></div>`;
+                    }
+                    html += `<div class="grid-detail-row" onclick="event.stopPropagation()"></div></div>`; area.innerHTML += html;
+                });
+            }
+        }
+
+        function toggleWeekDetail(el, event, dateStr) { event.stopPropagation(); el.classList.remove('conflict'); let rowObj = agendaData.find(r => r.date === dateStr); if(rowObj) rowObj.conflict = false; const wasExpanded = el.classList.contains('expanded'); document.querySelectorAll('.schedule-row').forEach(r => r.classList.remove('expanded')); if(!wasExpanded) el.classList.add('expanded'); }
+        function openGridDetail(e, cellEl, dateStr, dayStr) { e.stopPropagation(); cellEl.classList.remove('conflict'); let rowObj = agendaData.find(r => r.date === dateStr); if(rowObj) rowObj.conflict = false; const gridContainer = cellEl.parentElement; const detailBox = gridContainer.querySelector('.grid-detail-row'); const children = Array.from(gridContainer.children); const idx = children.indexOf(cellEl); if (detailBox.style.display === 'block' && detailBox.dataset.cellIdx === idx.toString()) { detailBox.style.display = 'none'; detailBox.dataset.cellIdx = ""; return; } let uRole = (user.role||"").toLowerCase(); const isAdmin = ['admin', 'sef', 'chief'].includes(uRole); let detailCardsHtml = ""; let gateStr = ""; if(rowObj && rowObj.modules && rowObj.modules.length > 0) { gateStr = (rowObj.gate && cleanTime(rowObj.gate) !== "null") ? cleanTime(rowObj.gate) : ""; detailCardsHtml = rowObj.modules.map((m) => { let parsed = parseModule(m); return `<div class="module-card ${parsed.isOtel ? 'module-otel' : 'module-event'}"><div class="m-title" style="color:${parsed.isOtel ? 'var(--logo-color)' : 'var(--event-color)'}">${escapeHTML(parsed.cleanName)}</div>${parsed.hasTime ? `<div class="m-time">Saat: ${cleanTime(parsed.showtime)}</div>` : ''}${parsed.desc ? `<div class="m-desc">${escapeHTML(parsed.desc)}</div>` : ''}</div>`; }).join(''); } else { detailCardsHtml = `<div style="color:#aaa; font-style:italic; text-align:center; padding:15px 0;">Bu gün için planlanmış bir iş yok.</div>`; } let html = `${isAdmin ? `<button type="button" class="cal-edit-btn" onclick="openDayEdit('${dateStr}', '${dayStr}', event)">✎ Düzenle</button>` : ''}<div style="font-weight:bold; margin-bottom:10px; margin-top:${isAdmin ? '35px' : '0'}; color:#fff; text-align:center;">${dayStr}, ${formatDateTR(dateStr)}</div>${gateStr ? `<div style="color:var(--logo-color); font-weight:bold; margin-bottom:10px; text-align:center;">Çıkış: ${gateStr}</div>` : ''}${detailCardsHtml}`; document.querySelectorAll('.grid-detail-row').forEach(r => { r.style.display = 'none'; r.dataset.cellIdx = ""; }); const colNumber = (idx % 7) + 1; const rowNumber = Math.floor(idx / 7) + 1; detailBox.style.gridRow = `${rowNumber + 1}`; detailBox.style.setProperty('--col', colNumber); detailBox.innerHTML = html; detailBox.style.display = 'block'; detailBox.dataset.cellIdx = idx.toString(); }
+
+        // ==========================================
+        //         REJİ DÜZENLEME & BLUEPRINT HARİTA
+        // ==========================================
+        let openBlueprintIdx = -1;
+        function toggleReadBlueprint(idx) { if(isRejiEditing) return; openBlueprintIdx = (openBlueprintIdx === idx) ? -1 : idx; renderReji(); }
+        function generateReadSlotsHtml(rowIdx) { let html = ""; let r = rejiData[rowIdx]; for(let i=0; i<9; i++) { let cellData = r[3 + i]; if(!cellData) { html += `<div class="bp-slot"></div>`; } else { let member = allUsersData.find(t => t.key === cellData); let name = (member && member.name && String(member.name).trim() !== "") ? member.name.split(' ')[0] : "İsimsiz"; let photoHtml = member && member.photo ? `<img src="${getSafePhotoUrl(member.photo)}">` : `<div style="font-size:1.5rem; color:#888;">👤</div>`; let nameColor = (user && cellData === user.key) ? 'color:var(--logo-color);' : 'color:#fff;'; html += `<div class="bp-slot"><div class="bp-circle filled">${photoHtml}</div><div class="bp-name" style="${nameColor}">${escapeHTML(name)}</div></div>`; } } return html; }
+        function renderReji() { try { const container = document.getElementById("reji-list"); container.innerHTML = ""; if (isRejiEditing) { rejiData.forEach((r, idx) => { let isBlueprintOpen = (openBlueprintIdx === idx); container.innerHTML += `<div class="reji-edit-row-raw" data-idx="${idx}"><div style="display:flex; width:100%; align-items:center; gap:8px;"><div style="width:30px; font-weight:900; color:var(--logo-color); text-align:center; cursor:grab;" ontouchstart="handleRejiTouchStart(event, ${idx})" onmousedown="handleRejiTouchStart(event, ${idx})">↕</div><input class="reji-inp" value="${escapeHTML(r[1] || "")}" id="r-c-${idx}" placeholder="İçerik" style="text-align:left; margin:0;"><button type="button" onclick="toggleBlueprint(${idx})" style="background:var(--logo-color); color:#000; border:none; border-radius:50%; width:30px; height:30px; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0; box-shadow:0 2px 5px rgba(0,0,0,0.5);">🗺️</button><input class="reji-inp" value="${escapeHTML(r[2] || "")}" id="r-m-${idx}" placeholder="Müzik" style="text-align:right; margin:0;"><button type="button" class="reji-ctrl-btn" onclick="delReji(${idx})" style="padding:4px; flex-shrink:0;">🗑</button></div>${isBlueprintOpen ? `<div class="blueprint-container" style="margin-top:10px; width:100%;">${generateSlotsHtml(idx)}</div>` : ``}</div>`; }); container.innerHTML += `<div style="margin-top:15px; border-top:1px solid #333; padding-top:15px; display:flex; flex-direction:column; gap:10px;"><button type="button" onclick="addRejiRow()" style="background:#222; color:var(--logo-color); border:1px dashed var(--logo-color); padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">+ Satır Ekle</button><div style="display:flex; gap:10px;"><button type="button" onclick="cancelRejiEdit()" style="flex:1; background:#333; color:#fff; border:none; padding:15px; border-radius:8px; cursor:pointer;">İptal</button><button type="button" onclick="saveReji()" style="flex:1; background:var(--logo-color); color:#000; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">Kaydet</button></div></div>`; } else { if(rejiData.length === 0) container.innerHTML = `<div style="text-align:center; color:#888; font-style:italic;">Gösterilecek reji notu yok.</div>`; rejiData.forEach((r, idx) => { let isReadBlueprintOpen = (openBlueprintIdx === idx); let dancersList = []; for(let j=3; j<12; j++) { if(r[j]) { let member = allUsersData.find(t => t.key === r[j]); if(member) { let nameColor = (user && r[j] === user.key) ? 'color:var(--logo-color);' : 'color:#ccc;'; let safeName = (member.name && String(member.name).trim()!=="") ? escapeHTML(member.name.split(' ')[0]) : "İsimsiz"; dancersList.push(`<span style="${nameColor}">${safeName}</span>`); } } } let dancersHtml = dancersList.length > 0 ? dancersList.join(', ') : '-'; container.innerHTML += `<div class="reji-row" onclick="toggleReadBlueprint(${idx})"><div style="display:flex; width:100%; align-items:center; padding:15px;"><div style="font-weight:900; color:var(--logo-color); width:25px; font-size:1.1rem; text-align:left; flex-shrink:0;">${r[0] || ""}</div><div style="font-weight:bold; font-size:1rem; flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(r[1] || "")}</div><div style="flex:1.5; text-align:center; font-size:0.8rem; font-weight:bold; color:var(--logo-color); line-height:1.3; display:flex; justify-content:center; flex-wrap:wrap; gap:5px;">${dancersHtml}</div><div style="font-size:0.85rem; color:#888; flex:1; text-align:right; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(r[2] || "")}</div></div>${isReadBlueprintOpen ? `<div class="blueprint-container" style="margin:0 10px 15px 10px; width:calc(100% - 20px);" onclick="event.stopPropagation()">${generateReadSlotsHtml(idx)}</div>` : ''}</div>`; }); } } catch(e) { console.error("Reji Render Error: ", e); } }
+        let isRejiEditing = false; function toggleRejiEdit() { isRejiEditing = !isRejiEditing; document.getElementById('reji-edit-btn').style.display = isRejiEditing ? 'none' : 'block'; openBlueprintIdx = -1; if (isRejiEditing) renderReji(); else loadData(); } function cancelRejiEdit() { isRejiEditing = false; document.getElementById('reji-edit-btn').style.display = 'block'; renderReji(); } function updateRejiInputs() { document.querySelectorAll('.reji-edit-row-raw').forEach((rowEl) => { let idx = parseInt(rowEl.dataset.idx); let cEl = document.getElementById(`r-c-${idx}`); let mEl = document.getElementById(`r-m-${idx}`); if(cEl && mEl && rejiData[idx]) { rejiData[idx][1] = cEl.value; rejiData[idx][2] = mEl.value; } }); } function toggleBlueprint(idx) { updateRejiInputs(); openBlueprintIdx = (openBlueprintIdx === idx) ? -1 : idx; renderReji(); }
+        let bpDragData = null; function bpHandleDragStart(e, rIdx, sIdx) { bpDragData = {r: rIdx, s: sIdx}; e.dataTransfer.setData("text/plain", sIdx); e.target.classList.add('dragging'); } function bpHandleDragEnter(e, rIdx, sIdx) { e.preventDefault(); let slot = e.target.closest('.bp-slot'); if(slot) slot.classList.add('drag-over'); } function bpHandleDragLeave(e, rIdx, sIdx) { let slot = e.target.closest('.bp-slot'); if(slot) slot.classList.remove('drag-over'); } function bpHandleDrop(e, targetRowIdx, targetSlotIdx) { e.preventDefault(); document.querySelectorAll('.bp-slot').forEach(el => el.classList.remove('drag-over')); document.querySelectorAll('.bp-circle').forEach(el => el.classList.remove('dragging')); if(bpDragData && bpDragData.r === targetRowIdx && bpDragData.s !== targetSlotIdx) { let temp = rejiData[targetRowIdx][3 + bpDragData.s]; rejiData[targetRowIdx][3 + bpDragData.s] = rejiData[targetRowIdx][3 + targetSlotIdx]; rejiData[targetRowIdx][3 + targetSlotIdx] = temp; renderReji(); } bpDragData = null; } function bpTouchStart(e, rIdx, sIdx) { bpDragData = {r: rIdx, s: sIdx}; e.target.closest('.bp-circle').classList.add('dragging'); } function bpTouchMove(e) { if(bpDragData) e.preventDefault(); } function bpTouchEnd(e) { if(!bpDragData) return; document.querySelectorAll('.bp-circle').forEach(el => el.classList.remove('dragging')); let touch = e.changedTouches[0]; let elem = document.elementFromPoint(touch.clientX, touch.clientY); let slot = elem ? elem.closest('.bp-slot') : null; if(slot && slot.dataset.slotidx) { let tRow = parseInt(slot.dataset.rowidx); let tSlot = parseInt(slot.dataset.slotidx); if(tRow === bpDragData.r && tSlot !== bpDragData.s) { let temp = rejiData[tRow][3 + bpDragData.s]; rejiData[tRow][3 + bpDragData.s] = rejiData[tRow][3 + tSlot]; rejiData[tRow][3 + tSlot] = temp; } } bpDragData = null; renderReji(); }
+        function generateSlotsHtml(rowIdx) { let html = ""; let r = rejiData[rowIdx]; for(let i=0; i<9; i++) { let cellData = r[3 + i]; if(!cellData) { html += `<div class="bp-slot" data-rowidx="${rowIdx}" data-slotidx="${i}" ondragenter="bpHandleDragEnter(event, ${rowIdx}, ${i})" ondragleave="bpHandleDragLeave(event, ${rowIdx}, ${i})" ondragover="event.preventDefault()" ondrop="bpHandleDrop(event, ${rowIdx}, ${i})"><div class="bp-circle" onclick="openDancerSelect(${rowIdx}, ${i}, event)">+</div></div>`; } else { let member = allUsersData.find(t => t.key === cellData); let name = (member && member.name && String(member.name).trim() !== "") ? member.name.split(' ')[0] : "İsimsiz"; let photoHtml = member && member.photo ? `<img src="${getSafePhotoUrl(member.photo)}">` : ``; html += `<div class="bp-slot" data-rowidx="${rowIdx}" data-slotidx="${i}" ondragenter="bpHandleDragEnter(event, ${rowIdx}, ${i})" ondragleave="bpHandleDragLeave(event, ${rowIdx}, ${i})" ondragover="event.preventDefault()" ondrop="bpHandleDrop(event, ${rowIdx}, ${i})"><div class="bp-circle filled" draggable="true" ondragstart="bpHandleDragStart(event, ${rowIdx}, ${i})" ontouchstart="bpTouchStart(event, ${rowIdx}, ${i})" ontouchmove="bpTouchMove(event)" ontouchend="bpTouchEnd(event)" onclick="toggleSlotActions(${rowIdx}, ${i}, event)">${photoHtml}</div><div class="bp-actions" id="bp-act-${rowIdx}-${i}"><button type="button" class="bp-act-btn" onclick="openDancerSelect(${rowIdx}, ${i}, event)">Değiştir</button><button type="button" class="bp-act-btn" style="color:var(--danger);" onclick="removeDancer(${rowIdx}, ${i}, event)">Sil</button></div><div class="bp-name">${escapeHTML(name)}</div></div>`; } } return html; }
+        
+        let dsTargetRow = -1; let dsTargetSlot = -1; 
+        function openDancerSelect(rowIdx, slotIdx, e) { 
+            if(e) e.stopPropagation(); 
+            updateRejiInputs(); dsTargetRow = rowIdx; dsTargetSlot = slotIdx; let html = ""; 
+            
+            let uRole = (user.role || "").toLowerCase();
+            let isAdmin = ['admin'].includes(uRole);
+            let activeCrew = isAdmin ? adminSelectedCrew : user.crew;
+            
+            let availableDancers = teamData.filter(m => m.crew === activeCrew);
+
+            availableDancers.forEach(member => { 
+                let safeUrl = getSafePhotoUrl(member.photo); let photoHtml = safeUrl ? `<img src="${safeUrl}" style="width:30px;height:30px; border-radius:50%; object-fit:cover;">` : `👤`; 
+                html += `<div style="background:#222; padding:10px; border-radius:6px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="selectDancer('${escapeJS(member.key)}')"><div style="width:30px; height:30px; display:flex; justify-content:center; align-items:center;">${photoHtml}</div><span style="color:#fff; font-weight:bold;">${escapeHTML(member.name)}</span></div>`; 
+            }); 
+            
+            if(availableDancers.length === 0) html = `<div style="color:#888; text-align:center; padding:10px;">Ekibinizde dansçı bulunmuyor.</div>`;
+            
+            document.getElementById('ds-list').innerHTML = html; document.getElementById('dancer-select-modal').style.display = 'flex'; 
+        }
+
+        function selectDancer(userKey) { let r = rejiData[dsTargetRow]; for(let i=3; i<12; i++) { if(r[i] === userKey && i !== (3+dsTargetSlot)) { showToast("Bu dansçı zaten sahnede!"); return; } } rejiData[dsTargetRow][3 + dsTargetSlot] = userKey; closeDancerSelect(); renderReji(); } function closeDancerSelect() { document.getElementById('dancer-select-modal').style.display = 'none'; } function removeDancer(rowIdx, slotIdx, e) { if(e) e.stopPropagation(); rejiData[rowIdx][3 + slotIdx] = ""; renderReji(); } function toggleSlotActions(rowIdx, slotIdx, e) { if(e) e.stopPropagation(); document.querySelectorAll('.bp-actions').forEach(el => el.classList.remove('active')); document.getElementById(`bp-act-${rowIdx}-${slotIdx}`).classList.toggle('active'); }
+        function addRejiRow() { updateRejiInputs(); rejiData.push([rejiData.length+1, "", "", "", "", "", "", "", "", "", "", ""]); renderReji(); } function delReji(idx) { updateRejiInputs(); rejiData.splice(idx, 1); rejiData.forEach((r,i)=>r[0]=i+1); renderReji(); }
+        async function saveReji() { updateRejiInputs(); isRejiEditing = false; document.getElementById('reji-edit-btn').style.display = 'block'; renderReji(); showSync(); const payload = { action: 'saveReji', data: rejiData, crew: adminSelectedCrew || user.crew }; fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).then(hideSync).catch(e=>console.log(e)); }
+        let rDraggedIdx = null; function handleRejiTouchStart(e, idx) { rDraggedIdx = idx; const target = e.target.closest('.reji-edit-row-raw'); target.style.opacity = '0.5'; document.addEventListener('touchmove', handleRejiTouchMove, {passive: false}); document.addEventListener('touchend', handleRejiTouchEnd); document.addEventListener('mousemove', handleRejiTouchMove); document.addEventListener('mouseup', handleRejiTouchEnd); } function handleRejiTouchMove(e) { if(rDraggedIdx === null) return; e.preventDefault(); const clientY = e.touches ? e.touches[0].clientY : e.clientY; const clientX = e.touches ? e.touches[0].clientX : e.clientX; const elem = document.elementFromPoint(clientX, clientY); const row = elem ? elem.closest('.reji-edit-row-raw') : null; document.querySelectorAll('.reji-edit-row-raw').forEach(r => r.style.borderTop = 'none'); if(row && row.dataset.idx !== rDraggedIdx.toString()) row.style.borderTop = '3px solid var(--logo-color)'; } function handleRejiTouchEnd(e) { if(rDraggedIdx === null) return; const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY; const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX; const elem = document.elementFromPoint(clientX, clientY); const row = elem ? elem.closest('.reji-edit-row-raw') : null; if(row) { const dropIdx = parseInt(row.dataset.idx); if(rDraggedIdx !== dropIdx) { const temp = rejiData[rDraggedIdx]; rejiData.splice(rDraggedIdx, 1); rejiData.splice(dropIdx, 0, temp); rejiData.forEach((r, i) => r[0] = i + 1); } } rDraggedIdx = null; document.removeEventListener('touchmove', handleRejiTouchMove); document.removeEventListener('touchend', handleRejiTouchEnd); document.removeEventListener('mousemove', handleRejiTouchMove); document.removeEventListener('mouseup', handleRejiTouchEnd); renderReji(); }
+
+        // GÜNÜ DÜZENLE VE MODALLAR 
+        let dayReorderData = [];
+        function resetDeleteMode() { document.querySelectorAll('.reji-edit-row').forEach(el => { const normal = el.querySelector('.normal-view'); const opts = el.querySelector('.delete-opts-view'); if(normal) normal.style.display = 'flex'; if(opts) opts.style.display = 'none'; }); }
+        function showDeleteOpts(idx, e) { e.stopPropagation(); resetDeleteMode(); const row = document.querySelector(`.reji-edit-row[data-idx='${idx}']`); if(row) { row.querySelector('.normal-view').style.display = 'none'; row.querySelector('.delete-opts-view').style.display = 'flex'; } }
+        function openDayEdit(dateStr, dayStr, e) { e.stopPropagation(); resetDeleteMode(); let row = agendaData.find(r => r.date === dateStr); if (row) row.conflict = false; let rIdx = row ? row.rowIndex : ""; let gateStr = (row && row.gate) ? cleanTime(row.gate) : ""; if (gateStr === "null") gateStr = ""; document.getElementById('de-row-index').value = rIdx; document.getElementById('de-date-str').value = dateStr; document.getElementById('de-day-str').value = dayStr; document.getElementById('de-date-title').innerText = `${dayStr}, ${formatDateTR(dateStr)}`; document.getElementById('de-gate-time').value = gateStr; dayReorderData = (row && row.modules) ? JSON.parse(JSON.stringify(row.modules)) : []; renderDayEditList(); document.getElementById('day-edit-modal').style.display = 'flex'; }
+        function renderDayEditList() { let container = document.getElementById('de-module-list'); container.innerHTML = ""; const btnAdd = document.getElementById('btn-add-new-module'); if(dayReorderData.length >= 6) btnAdd.style.display = 'none'; else btnAdd.style.display = 'block'; if(dayReorderData.length === 0) { container.innerHTML = `<div style="color:#888; font-style:italic; text-align:center; padding:15px; border: 1px dashed #444; border-radius: 8px;">Bu gün için planlanmış bir iş yok.</div>`; return; } dayReorderData.forEach((m, idx) => { let parsed = parseModule(m); let borderColor = parsed.isOtel ? 'var(--logo-color)' : 'var(--event-color)'; container.innerHTML += `<div class="reji-edit-row" data-idx="${idx}" style="background:#222; border-radius:6px; margin-bottom:8px; display:flex; flex-direction:column; overflow:hidden; border-left: 3px solid ${borderColor};"><div class="normal-view" style="display:flex; align-items:center; padding:10px; width:100%;"><div class="card-center-click" onclick="openModuleEditInsideDay(${idx}, event)" style="flex:1; cursor:pointer;"><div style="color:#fff; font-weight:bold;">${escapeHTML(parsed.cleanName)}</div><div style="color:#aaa; font-size:0.8rem;">Saat: ${parsed.hasTime ? cleanTime(parsed.showtime) : 'Belirtilmedi'}</div></div><button type="button" class="reji-ctrl-btn" onclick="showDeleteOpts(${idx}, event)" style="margin-left:auto; color:var(--danger); background:transparent; border:none; font-size:1.3rem; cursor:pointer;">🗑</button></div><div class="delete-opts-view" style="display:none; width:100%; height:50px;"><button type="button" class="del-opt-btn single" style="flex:1; border:none; background:#ff4d4d; color:#fff; font-weight:bold; cursor:pointer;" onclick="massDeleteModule(${idx}, 'single', event)">Tek Seferlik</button><button type="button" class="del-opt-btn future" style="flex:1; border:none; background:#cc0000; color:#fff; font-weight:bold; cursor:pointer;" onclick="massDeleteModule(${idx}, 'future', event)">Bundan Sonra</button><button type="button" class="del-opt-btn all" style="flex:1; border:none; background:#990000; color:#fff; font-weight:bold; cursor:pointer;" onclick="massDeleteModule(${idx}, 'all', event)">Tamamen</button></div></div>`; }); }
+        function openModuleEditInsideDay(modIdx, e) { e.stopPropagation(); resetDeleteMode(); const mData = dayReorderData[modIdx]; let parsed = parseModule(mData); document.getElementById('modal-title').innerText = "İşi Düzenle"; document.getElementById('wrap-freq').style.display = 'none'; document.getElementById('f-row-index').value = document.getElementById('de-row-index').value; document.getElementById('f-module-index').value = modIdx; document.getElementById('f-type').value = parsed.isOtel ? 'sahne' : 'etkinlik'; document.getElementById('f-name').value = parsed.cleanName; document.getElementById('f-show-time').value = parsed.hasTime ? cleanTime(parsed.showtime) : ""; document.getElementById('f-desc').value = parsed.desc || ""; document.getElementById('f-date').value = document.getElementById('de-date-str').value; document.getElementById('f-day').value = document.getElementById('de-day-str').value; toggleFormFields(); document.getElementById('day-edit-modal').style.display = 'none'; document.getElementById('event-modal').style.display = 'flex'; }
+        async function saveDayGate(event) { const rIdx = document.getElementById('de-row-index').value; const dStr = document.getElementById('de-date-str').value; if(!rIdx) { alert("Lütfen önce etkinlik ekleyin."); return; } const nGate = document.getElementById('de-gate-time').value; let targetRow = agendaData.find(r => r.date === dStr); if(targetRow) targetRow.gate = nGate; renderTakvim(); showSync(); triggerSync([targetRow]); const btn = event.target; btn.innerText = "Kaydedildi"; setTimeout(() => { btn.innerText = "Kaydet"; }, 1000); }
+        async function massDeleteModule(modIdx, scope, event) { event.stopPropagation(); resetDeleteMode(); const dStr = document.getElementById('de-date-str').value; const dayStr = document.getElementById('de-day-str').value; const targetRawName = dayReorderData[modIdx].name; document.getElementById('day-edit-modal').style.display = 'none'; let modifiedDays = []; agendaData.forEach(row => { let match = false; if (scope === 'single' && row.date === dStr) match = true; else if (scope === 'future' && row.date >= dStr && row.day.toLowerCase() === dayStr.toLowerCase()) match = true; else if (scope === 'all' && row.day.toLowerCase() === dayStr.toLowerCase()) match = true; if (match && row.modules) { let idx = row.modules.findIndex(m => m.name === targetRawName); if (idx > -1) { row.modules.splice(idx, 1); if (row.modules.length === 0) row.gate = ""; modifiedDays.push(row); } } }); renderTakvim(); showSync(); triggerSync(modifiedDays); }
+        function openAddFromDayEdit() { if(dayReorderData.length >= 6) return; document.getElementById('day-edit-modal').style.display = 'none'; document.getElementById('modal-title').innerText = "Yeni İş Ekle"; document.getElementById('wrap-freq').style.display = 'block'; document.getElementById('f-row-index').value = ""; document.getElementById('f-module-index').value = ""; document.getElementById('f-name').value = ""; document.getElementById('f-desc').value = ""; document.getElementById('f-show-time').value = ""; document.getElementById('f-gate').value = ""; document.getElementById('f-start-date').value = ""; document.getElementById('f-end-date').value = ""; document.getElementById('f-type').value = "sahne"; document.getElementById('f-freq').value = "single"; document.getElementById('f-date').value = document.getElementById('de-date-str').value; document.getElementById('f-day').value = document.getElementById('de-day-str').value; toggleFormFields(); document.getElementById('event-modal').style.display = 'flex'; }
+        function toggleFormFields() { const type = document.getElementById('f-type').value; const freq = document.getElementById('f-freq').value; document.getElementById('lbl-name').innerText = type === 'sahne' ? 'Sahne İsmi' : 'Etkinlik İsmi'; document.getElementById('lbl-show-time').innerText = type === 'sahne' ? 'Showtime' : 'Aksiyon'; document.getElementById('field-date-single').style.display = freq === 'single' ? 'block' : 'none'; document.getElementById('field-date-weekly').style.display = (freq === 'weekly' || freq === 'biweekly') ? 'block' : 'none'; document.getElementById('fields-weekly-range').style.display = (freq === 'weekly' || freq === 'biweekly') ? 'block' : 'none'; document.getElementById('field-otel-gate').style.display = type === 'sahne' ? 'block' : 'none'; }
+        function closeModal() { document.getElementById('event-modal').style.display = 'none'; }
+        
+        async function saveEvent() { const isEdit = document.getElementById('f-row-index').value !== ""; const modIdx = document.getElementById('f-module-index').value; const type = document.getElementById('f-type').value; const freq = document.getElementById('f-freq').value; let name = document.getElementById('f-name').value.trim(); if(!name) { alert("Lütfen bir isim girin!"); return; } if (type === 'sahne') { if (!String(name).startsWith('$')) name = '$' + name; } else { if (String(name).startsWith('$')) name = String(name).substring(1).trim(); } const desc = document.getElementById('f-desc').value; const show = document.getElementById('f-show-time').value || ""; const newGate = type === 'sahne' ? document.getElementById('f-gate').value : ""; const targetDate = document.getElementById('f-date').value; const targetDayName = document.getElementById('f-day').value; const startDate = document.getElementById('f-start-date').value; const endDate = document.getElementById('f-end-date').value; if(!isEdit && (freq === 'weekly' || freq === 'biweekly') && (!startDate || !endDate)) { alert("Lütfen Başlangıç ve Bitiş tarihlerini seçin!"); return; } document.getElementById('event-modal').style.display = 'none'; let modifiedDays = []; if (isEdit) { let row = agendaData.find(r => r.date === targetDate); if(row && row.modules[modIdx]) { if (newGate) row.gate = newGate; row.modules[modIdx] = {name: name, showtime: show, desc: desc}; sortModules(row.modules); modifiedDays.push(row); } } else if (freq === 'weekly' || freq === 'biweekly') { let start = new Date(startDate); let end = new Date(endDate); let dayStep = freq === 'biweekly' ? 14 : 7; let current = new Date(start); while(current <= end && trDaysFull[current.getDay()] !== targetDayName) { current.setDate(current.getDate() + 1); } while(current <= end) { let dStr = `${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,'0')}-${String(current.getDate()).padStart(2,'0')}`; let row = agendaData.find(r => r.date === dStr); if (row) { if (row.modules && row.modules.length > 0) row.conflict = true; else if (newGate) row.gate = newGate; if (row.modules.length < 6) { row.modules.push({name: name, showtime: show, desc: desc}); sortModules(row.modules); modifiedDays.push(row); } } else { let newRow = {rowIndex:"", date: dStr, day: targetDayName, gate: newGate, conflict: false, modules: [{name: name, showtime: show, desc: desc}]}; agendaData.push(newRow); modifiedDays.push(newRow); } current.setDate(current.getDate() + dayStep); } } else { let row = agendaData.find(r => r.date === targetDate); if(row) { if (newGate) row.gate = newGate; if (row.modules.length < 6) { row.modules.push({name: name, showtime: show, desc: desc}); sortModules(row.modules); modifiedDays.push(row); } } else { let newRow = {rowIndex:"", date: targetDate, day: targetDayName, gate: newGate, conflict: false, modules: [{name: name, showtime: show, desc: desc}]}; agendaData.push(newRow); modifiedDays.push(newRow); } } renderTakvim(); showSync(); triggerSync(modifiedDays); }
+    </script>
+</body>
+</html>
